@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Loading the data
 
-We're going to use a [dataset taken from Kaggle](https://www.kaggle.com/ronitf/heart-disease-uci) containing a total of 13 physical attributes of patients which are related the likelihood of having heart disease, along with a variable indicating whether or not the patient actually has heart disease.
+We're going to use a [dataset taken from Kaggle](https://www.kaggle.com/ronitf/heart-disease-uci) containing a total of 13 physical attributes of patients relating to the likelihood of heart disease, along with a variable indicating whether or not the patient actually has heart disease.
 
 ```{r warning = FALSE, message = FALSE}
 library(tidyverse)
@@ -46,7 +46,7 @@ tibble(
 nrow(data)
 ```
 
-We can see that each of the 14 variables are numeric and that we have no missing values in any of the 303 observations. Whilst all of the variables have been identified as numeric, this doesn't really make sense since a number are actually integer representations of categorical variables, for example, the chest pain type ```cp``` can take values of ```0```, ```1```, ```2```, or ```3```, but a value of say ```2.6``` makes no sense.  We therefore need to convert variables like this to factors:
+We can see that each of the 14 variables are numeric and that we have no missing values in any of the 303 observations. Whilst all of the variables have been identified as numeric, this doesn't really make sense since a number are actually integer representations of categorical variables, for example, the chest pain type ```cp``` can take values of ```0```, ```1```, ```2```, or ```3```, but a value of say ```2.6``` doesn't really mean anything.  We therefore need to convert variables like this to factors:
 
 
 ```{r warning = FALSE, message = FALSE}
@@ -64,6 +64,60 @@ data %<>%
     thal = as.factor(thal),
     target = as.factor(target)
   )
+```
+
+Let's look at the distribution of age in the sample:
+
+```{r fig.retina = 2, fig.align = 'center'}
+library(hrbrthemes)
+
+# histograms
+data %>%
+  ggplot(aes(x = age, y = ..density..)) + 
+  geom_histogram(bins = 50, colour = "orange2", fill = "white") + 
+  geom_density(colour = "orange2", fill = "orange", alpha = 0.2) + 
+  xlab("Age") + 
+  ylab("Density") + 
+  theme_ipsum()
+```
+
+We can see that the majority of the sample population are in their late 50s, though there's also a peak around the mid-40s as well. We have a ```sex``` variable so let's see if there's much difference between the distribution of ages between sexes:
+
+```{r fig.retina = 2, fig.align = 'center'}
+# boxplots
+data %>%
+  ggplot(aes(x = sex, y = age, colour = sex)) + 
+  geom_boxplot(alpha = 0.3, show.legend = FALSE) + 
+  geom_jitter(alpha = 0.3, show.legend = FALSE) + 
+  coord_flip() + 
+  scale_x_discrete(label = c("Female", "Male")) + 
+  xlab(NULL) + 
+  ylab("Age") + 
+  theme_ipsum()
+```
+
+We can see from the box plots that there is a difference between the distribution of male and female ages in the sample, in particular the median age of male patients is slightly lower than that of female pateints, and the male population looks to have a wider range of ages, however the difference between the two don't look to be particularly drastic.
+
+It'd be interesting to see the correlation between the various variables in the data set:
+
+```{r fig.retina = 2, fig.align = 'center'}
+library(ggcorrplot)
+
+# correlation matrix
+cor_mat <- data %>%
+  select_if(is.numeric) %>%
+  cor()
+
+# significance of correlations
+p.mat <- data %>%
+  select_if(is.numeric) %>%
+  cor_pmat()
+  
+# correlogram
+data %>%
+  select_if(is.numeric) %>%
+  cor() %>%
+  ggcorrplot(type = "lower", p.mat = p.mat)
 ```
 
 ## Training a model
@@ -135,12 +189,10 @@ model_log$model
 We can see from the above results that the multiple logistic regression model has an accuracy of roughly 84% which is impressive for such a simple model! Let's see which of the features were most influential by looking at the variable importance score:
 
 ```{r fig.retina = 2, fig.align = 'center', message = FALSE}
-library(hrbrthemes)
-
 # plot
 varImp(model_log$model) %>%
   ggplot(aes(x = rownames(), y = Overall)) + 
-  geom_col() + 
+  geom_col(colour = "orange2", fill = "white") + 
   coord_flip() + 
   xlab(NULL) +
   ylab("Variable Importance Score") + 

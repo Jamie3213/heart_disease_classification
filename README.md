@@ -6,9 +6,9 @@ Jamie Hargreaves
 
 We’re going to use a [dataset taken from
 Kaggle](https://www.kaggle.com/ronitf/heart-disease-uci) containing a
-total of 13 physical attributes of patients which are related the
-likelihood of having heart disease, along with a variable indicating
-whether or not the patient actually has heart disease.
+total of 13 physical attributes of patients relating to the likelihood
+of heart disease, along with a variable indicating whether or not the
+patient actually has heart disease.
 
 ``` r
 library(tidyverse)
@@ -70,8 +70,8 @@ missing values in any of the 303 observations. Whilst all of the
 variables have been identified as numeric, this doesn’t really make
 sense since a number are actually integer representations of categorical
 variables, for example, the chest pain type `cp` can take values of `0`,
-`1`, `2`, or `3`, but a value of say `2.6` makes no sense. We therefore
-need to convert variables like this to factors:
+`1`, `2`, or `3`, but a value of say `2.6` doesn’t really mean anything.
+We therefore need to convert variables like this to factors:
 
 ``` r
 library(magrittr)
@@ -81,13 +81,83 @@ data %<>%
   mutate(
     sex = as.factor(sex),
     cp = as.factor(cp),
+    fbs = as.factor(fbs),
     restecg = as.factor(restecg),
     exang = as.factor(exang),
-    ca = as.factor(ca),
+    slope = as.factor(slope),
     thal = as.factor(thal),
     target = as.factor(target)
   )
 ```
+
+Let’s look at the distribution of age in the sample:
+
+``` r
+library(hrbrthemes)
+
+# histograms
+data %>%
+  ggplot(aes(x = age, y = ..density..)) + 
+  geom_histogram(bins = 50, colour = "orange2", fill = "white") + 
+  geom_density(colour = "orange2", fill = "orange", alpha = 0.2) + 
+  xlab("Age") + 
+  ylab("Density") + 
+  theme_ipsum()
+```
+
+<img src="README_files/figure-gfm/unnamed-chunk-4-1.png" width="672" style="display: block; margin: auto;" />
+
+We can see that the majority of the sample population are in their late
+50s, though there’s also a peak around the mid-40s as well. We have a
+`sex` variable so let’s see if there’s much difference between the
+distribution of ages between sexes:
+
+``` r
+# boxplots
+data %>%
+  ggplot(aes(x = sex, y = age, colour = sex)) + 
+  geom_boxplot(alpha = 0.3, show.legend = FALSE) + 
+  geom_jitter(alpha = 0.3, show.legend = FALSE) + 
+  coord_flip() + 
+  scale_x_discrete(label = c("Female", "Male")) + 
+  xlab(NULL) + 
+  ylab("Age") + 
+  theme_ipsum()
+```
+
+<img src="README_files/figure-gfm/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" />
+
+We can see from the box plots that there is a difference between the
+distribution of male and female ages in the sample, in particular the
+median age of male patients is slightly lower than that of female
+pateints, and the male population looks to have a wider range of ages,
+however the difference between the two don’t look to be particularly
+drastic.
+
+It’d be interesting to see the correlation between the various variables
+in the data set:
+
+``` r
+library(ggcorrplot)
+
+# correlation matrix
+cor_mat <- data %>%
+  select_if(is.numeric) %>%
+  cor()
+
+# significance of correlations
+p.mat <- data %>%
+  select_if(is.numeric) %>%
+  cor_pmat()
+  
+# correlogram
+data %>%
+  select_if(is.numeric) %>%
+  cor() %>%
+  ggcorrplot(type = "lower", p.mat = p.mat)
+```
+
+<img src="README_files/figure-gfm/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" />
 
 ## Training a model
 
@@ -207,24 +277,22 @@ model_log$model
     ## Resampling results:
     ## 
     ##   Accuracy   Kappa    
-    ##   0.8318355  0.6596948
+    ##   0.8359524  0.6687658
 
 We can see from the above results that the multiple logistic regression
-model has an accuracy of roughly 83% which is impressive for such a
+model has an accuracy of roughly 84% which is impressive for such a
 simple model\! Let’s see which of the features were most influential by
 looking at the variable importance score:
 
 ``` r
-library(hrbrthemes)
-
 # plot
 varImp(model_log$model) %>%
   ggplot(aes(x = rownames(), y = Overall)) + 
-  geom_col() + 
+  geom_col(colour = "orange2", fill = "white") + 
   coord_flip() + 
   xlab(NULL) +
   ylab("Variable Importance Score") + 
   theme_ipsum()
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-9-1.png" width="672" style="display: block; margin: auto;" />
