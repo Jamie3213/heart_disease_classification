@@ -70,7 +70,7 @@ data %<>%
 
 Let's first look at the continuous variables in the data, we'll start by looking at their distribution:
 
-```{r fig.retina = 2, fig.align = 'center', message = FALSE, warning = FALSE}
+```{r fig.retina = 2, fig.align = 'center', fig.width = 10, fig.height = 10, message = FALSE, warning = FALSE}
 library(hrbrthemes)
 library(gridExtra)
 
@@ -81,15 +81,14 @@ histograms <- map(
     colnames(),
   function(x){
     data %>%
-      ggplot(aes_string(x = x, y = "..density..")) + 
-      geom_histogram(colour = "orange2", fill = "white") + 
-      geom_density(colour = "orange2", fill = "orange", alpha = 0.2) + 
-      ylab("Density") + 
-      theme_ipsum() + 
-      theme(
-        axis.text.x = element_text(size = 8),
-        axis.text.y = element_text(size = 8)
-      )
+      ggplot(aes(x = !!as.name(x), y = ..density..)) + 
+      geom_histogram(colour = "#00BFC4", fill = "white") + 
+      geom_density(colour = "#00BFC4", fill = "#00BFC4", alpha = 0.2) + 
+      labs(
+        y = "Density",
+        title = x
+      ) + 
+      theme_ipsum()
   }
 )
 
@@ -103,7 +102,7 @@ We can see that patients in the samlple population are most likely to be in thei
 
 We can use box plots to look at the difference in the these numeric variables when we split the population based on ```sex```:
 
-```{r fig.retina = 2, fig.align = 'center', warning = FALSE, message = FALSE}
+```{r fig.retina = 2, fig.align = 'center', fig.width = 10, fig.height = 10, warning = FALSE, message = FALSE}
 # boxplots
 box_plots <- map(
   map_chr(
@@ -121,17 +120,16 @@ box_plots <- map(
   pull(),
   function(x){
     data %>%
-      ggplot(aes_string(x = "sex", y = x, colour = "sex")) + 
+      ggplot(aes(x = sex, y = !!as.name(x), colour = sex)) + 
       geom_boxplot(alpha = 0.3, show.legend = FALSE) + 
       geom_jitter(alpha = 0.1, show.legend = FALSE) + 
       coord_flip() +
       scale_x_discrete(label = c("Female", "Male")) + 
-      xlab(NULL) + 
-      theme_ipsum() +
-      theme(
-        axis.text.x = element_text(size = 8),
-        axis.text.y = element_text(size = 8)
-      )
+      labs(
+        x = NULL,
+        title = x
+      ) +
+      theme_ipsum()
   }
 )
 
@@ -168,10 +166,11 @@ tibble(
     }
   )
 ) %>%
-  ggplot(aes(x = var, y = corr, fill = factor(is.sig, levels = c(0,1), label = c("No", "Yes")))) +
-  geom_col() + 
+  ggplot(aes(x = var, y = corr, fill = factor(is.sig, levels = c(0,1), label = c("No", "Yes")), colour = ..fill..)) +
+  geom_col(alpha = 0.3) + 
   coord_flip() + 
   scale_fill_discrete(name = "Is significant?") + 
+  scale_color_discrete(guide = FALSE) + 
   xlab(NULL) + 
   ylab("Correlation coefficient") + 
   theme_ipsum()
@@ -191,7 +190,7 @@ data %>%
   mutate(per = str_c(round(100 * count / sum(count), 1), "%")) %>%
   ggplot(aes(x = factor(target, levels = c(0,1), label = c("No heart disease", "Heart disease")), 
              y = count, label = per)) + 
-  geom_col(colour = "orange2", fill = "orange", alpha = 0.3, width = 0.5) + 
+  geom_col(colour = "#00BFC4", fill = "#00BFC4", alpha = 0.3, width = 0.5) + 
   geom_text(hjust = -0.2) + 
   coord_flip(clip = "off") + 
   xlab(NULL) + 
@@ -202,7 +201,7 @@ data %>%
 
 From the above plot, we can see that there are slightly more patients with heart disease than without, though the data set isn't massively skewed, with only a 9% difference. Similarly, we can look at the weightings of each of the categories of the various categorical variables:
 
-```{r fig.retina = 2, fig.align = 'center'}
+```{r fig.retina = 2, fig.align = 'center', fig.width = 10, fig.height = 10}
 # get the categorical variables
 cat_vars <- data %>%
   select_if(is.factor) %>%
@@ -213,21 +212,27 @@ cat_plots <- map(
   names(cat_vars),
   function(x){
     data %>%
-      group_by(!!as.name(x)) %>%
+      group_by(target, !!as.name(x)) %>%
       summarise(count = n()) %>%
-      mutate(per = str_c(round(100 * count / sum(count), 1), "%")) %>%
-      ggplot(aes_string(x = x, y = "count", label = "per")) + 
-      geom_col(colour = "orange2", fill = "orange", alpha = 0.3, width = 0.5) + 
-      geom_text(hjust = -0.2) + 
-      coord_flip(clip = "off") + 
-      xlab(NULL) + 
+      ggplot(aes(x = factor(target, levels = c(0,1), 
+                            label = c("No heart disease", "Heart disease")), 
+                            y = count, fill = !!as.name(x), 
+                            colour = ..fill..)) + 
+      geom_col(position = "dodge", alpha = 0.3, show.legend = FALSE) + 
+      coord_flip() + 
+      labs(
+        x = NULL,
+        title = x
+      ) +
+      ylab("Number of Occurrences") + 
       theme_ipsum()
   }
 )
 
-# print
 do.call(grid.arrange, cat_plots)
 ```
+
+We can see from the above that a number of the variables are quite unevenly distributed over their different levels. There's a significant skew towards males in the population
 
 ## Training a model
 

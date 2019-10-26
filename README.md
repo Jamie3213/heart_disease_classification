@@ -106,15 +106,14 @@ histograms <- map(
     colnames(),
   function(x){
     data %>%
-      ggplot(aes_string(x = x, y = "..density..")) + 
-      geom_histogram(colour = "orange2", fill = "white") + 
-      geom_density(colour = "orange2", fill = "orange", alpha = 0.2) + 
-      ylab("Density") + 
-      theme_ipsum() + 
-      theme(
-        axis.text.x = element_text(size = 8),
-        axis.text.y = element_text(size = 8)
-      )
+      ggplot(aes(x = !!as.name(x), y = ..density..)) + 
+      geom_histogram(colour = "#00BFC4", fill = "white") + 
+      geom_density(colour = "#00BFC4", fill = "#00BFC4", alpha = 0.2) + 
+      labs(
+        y = "Density",
+        title = x
+      ) + 
+      theme_ipsum()
   }
 )
 
@@ -122,7 +121,7 @@ histograms <- map(
 do.call(grid.arrange, histograms)
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-4-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-4-1.png" width="960" style="display: block; margin: auto;" />
 
 We can see that patients in the samlple population are most likely to be
 in their late 50s, though we can also see a smaller peak in the density
@@ -161,17 +160,16 @@ box_plots <- map(
   pull(),
   function(x){
     data %>%
-      ggplot(aes_string(x = "sex", y = x, colour = "sex")) + 
+      ggplot(aes(x = sex, y = !!as.name(x), colour = sex)) + 
       geom_boxplot(alpha = 0.3, show.legend = FALSE) + 
       geom_jitter(alpha = 0.1, show.legend = FALSE) + 
       coord_flip() +
       scale_x_discrete(label = c("Female", "Male")) + 
-      xlab(NULL) + 
-      theme_ipsum() +
-      theme(
-        axis.text.x = element_text(size = 8),
-        axis.text.y = element_text(size = 8)
-      )
+      labs(
+        x = NULL,
+        title = x
+      ) +
+      theme_ipsum()
   }
 )
 
@@ -179,7 +177,7 @@ box_plots <- map(
 do.call(grid.arrange, box_plots)
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-5-1.png" width="960" style="display: block; margin: auto;" />
 
 We can see from the box plots that overall there is little difference
 between male and female patients in the population. The median age of
@@ -215,10 +213,11 @@ tibble(
     }
   )
 ) %>%
-  ggplot(aes(x = var, y = corr, fill = factor(is.sig, levels = c(0,1), label = c("No", "Yes")))) +
-  geom_col() + 
+  ggplot(aes(x = var, y = corr, fill = factor(is.sig, levels = c(0,1), label = c("No", "Yes")), colour = ..fill..)) +
+  geom_col(alpha = 0.3) + 
   coord_flip() + 
   scale_fill_discrete(name = "Is significant?") + 
+  scale_color_discrete(guide = FALSE) + 
   xlab(NULL) + 
   ylab("Correlation coefficient") + 
   theme_ipsum()
@@ -251,7 +250,7 @@ data %>%
   mutate(per = str_c(round(100 * count / sum(count), 1), "%")) %>%
   ggplot(aes(x = factor(target, levels = c(0,1), label = c("No heart disease", "Heart disease")), 
              y = count, label = per)) + 
-  geom_col(colour = "orange2", fill = "orange", alpha = 0.3, width = 0.5) + 
+  geom_col(colour = "#00BFC4", fill = "#00BFC4", alpha = 0.3, width = 0.5) + 
   geom_text(hjust = -0.2) + 
   coord_flip(clip = "off") + 
   xlab(NULL) + 
@@ -278,23 +277,31 @@ cat_plots <- map(
   names(cat_vars),
   function(x){
     data %>%
-      group_by(!!as.name(x)) %>%
+      group_by(target, !!as.name(x)) %>%
       summarise(count = n()) %>%
-      mutate(per = str_c(round(100 * count / sum(count), 1), "%")) %>%
-      ggplot(aes_string(x = x, y = "count", label = "per")) + 
-      geom_col(colour = "orange2", fill = "orange", alpha = 0.3, width = 0.5) + 
-      geom_text(hjust = -0.2) + 
-      coord_flip(clip = "off") + 
-      xlab(NULL) + 
+      ggplot(aes(x = factor(target, levels = c(0,1), 
+                            label = c("No heart disease", "Heart disease")), 
+                            y = count, fill = !!as.name(x), 
+                            colour = ..fill..)) + 
+      geom_col(position = "dodge", alpha = 0.3, show.legend = FALSE) + 
+      coord_flip() + 
+      labs(
+        x = NULL,
+        title = x
+      ) +
+      ylab("Number of Occurrences") + 
       theme_ipsum()
   }
 )
 
-# print
 do.call(grid.arrange, cat_plots)
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-8-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-8-1.png" width="960" style="display: block; margin: auto;" />
+
+We can see from the above that a number of the variables are quite
+unevenly distributed over their different levels. There’s a significant
+skew towards males in the population
 
 ## Training a model
 
@@ -410,11 +417,11 @@ model_log$model
     ## 
     ## No pre-processing
     ## Resampling: Cross-Validated (10 fold, repeated 5 times) 
-    ## Summary of sample sizes: 193, 192, 191, 192, 192, 191, ... 
+    ## Summary of sample sizes: 192, 191, 191, 192, 192, 192, ... 
     ## Resampling results:
     ## 
     ##   Accuracy   Kappa    
-    ##   0.8157835  0.6258402
+    ##   0.8359524  0.6687658
 
 We can see from the above results that the multiple logistic regression
 model has an accuracy of roughly 84% which is impressive for such a
