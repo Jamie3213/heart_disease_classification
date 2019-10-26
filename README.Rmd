@@ -199,9 +199,9 @@ data %>%
 ```
 
 
-From the above plot, we can see that there are slightly more patients with heart disease than without, though the data set isn't massively skewed, with only a 9% difference. Similarly, we can look at the weightings of each of the categories of the various categorical variables:
+From the above plot, we can see that there are slightly more patients with heart disease than without, though the data set isn't massively skewed, with only a 9% difference. Similarly, we can look at the proportion of patients in each of a variable's categories for heart disease vs. no heart disease:
 
-```{r fig.retina = 2, fig.align = 'center', fig.width = 10, fig.height = 10}
+```{r fig.retina = 2, fig.align = 'center', fig.width = 10, fig.height = 12}
 # get the categorical variables
 cat_vars <- data %>%
   select_if(is.factor) %>%
@@ -218,21 +218,39 @@ cat_plots <- map(
                             label = c("No heart disease", "Heart disease")), 
                             y = count, fill = !!as.name(x), 
                             colour = ..fill..)) + 
-      geom_col(position = "dodge", alpha = 0.3, show.legend = FALSE) + 
+      geom_col(position = "dodge", alpha = 0.3) + 
       coord_flip() + 
+      scale_fill_discrete(name = NULL) +
+      scale_color_discrete(guide = FALSE) + 
       labs(
         x = NULL,
         title = x
       ) +
       ylab("Number of Occurrences") + 
-      theme_ipsum()
+      theme_ipsum() + 
+      theme(legend.position = "bottom")
   }
 )
 
+# print
 do.call(grid.arrange, cat_plots)
 ```
 
-We can see from the above that a number of the variables are quite unevenly distributed over their different levels. There's a significant skew towards males in the population
+A numnber of things stand out from the plots above:
+
+1) There is a noticeably larger proprotion of females in the subset of patients with heart disease;
+
+2) There is a clear difference between the types of chest pain experienced by those with and those without heart disease. Patients without heart disease primarirly experience typical angina, whilst those with heart disease predomninantly experience nonanginal pain, as well atypical angina, closely followed by typical angina (see [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4468223/) for reference to the types of chest pain measured in this data set);
+
+3) There is almost no difference between the proportion of patients with and without a fasting blood sugar level of greater than 120 mg/dl, between patients with and without heart disease;
+
+4) The proportion of patients with normal ECG results decreases and the proportion with abnomral ECG results increases between patients without heart disease and patients with heart disease;
+
+5) The proportion of patients without exercise induced angina is noticeably higher in patients with heart disease;
+
+6) For patients without heart disease, the slope of the ST curve peak is predominantly flat, whilst for those with heart disease, the curve peak is predominantly downward-sloping; and
+
+7) 
 
 ## Training a model
 
