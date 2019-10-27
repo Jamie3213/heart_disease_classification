@@ -96,9 +96,17 @@ histograms <- map(
 do.call(grid.arrange, histograms)
 ```
 
+From the plots we can see that:
 
+* Patients in the sample population are most likely to be in their late 50s, though we can also see a smaller peak in the density curve in the mid-40s, as well;
 
-We can see that patients in the samlple population are most likely to be in their late 50s, though we can also see a smaller peak in the density curve in the mid-40s, as well. The resting blood pressure of patients has a peak around ```130```, though from the histogram we can see some large groupings interspersed between roughly ```100``` and ```140```, followed by a fairly swift drop. The distributions for both cholesterol and maximum heart rate look to be fairly normal (though there's a slight bumb in the heart rate curve), with peaks around ```240``` and ```160```, respectively. The histogram for ST depression (taken from an electrocardiogram) is heavily concentrated at ```0```, though has a fairly wide range. Finally, the number of major vessels looks to actually be a categorical variable despite the fact that we've treated is as numeric, however a number of papers ([here](http://csjournals.com/IJCSC/PDF7-1/18.%20Tejpal.pdf), for example), are clear that this variable should be treated as continuous so we'll follow that convention. 
+* The resting blood pressure ```trestbps``` of patients has a peak around ```130```, though from the histogram we can see some large groupings interspersed between ```100``` and ```140```, followed by a fairly swift drop;
+
+* The distributions for both cholesterol ```chol``` and maximum heart rate ```thalach``` look to be fairly normal (though there's a slight bumb in the heart rate curve), with peaks around ```240``` and ```160```, respectively;
+
+* The histogram for ST depression ```oldpeak``` (a measurement taken from an electrocardiogram), is heavily concentrated at ```0```, though has a fairly wide range; and
+
+* Finally, the number of major vessels looks to actually be a categorical variable despite the fact that we've treated is as numeric, however a number of papers ([here](http://csjournals.com/IJCSC/PDF7-1/18.%20Tejpal.pdf), for example), are clear that this variable should be treated as continuous so we'll follow that convention. It's worth noting also that numerous papers describe this variable as taking values between ```0``` and ```3``` in the data set, however we can see a small number of instances where ```ca = 4```. Given that the varibale is taken to be numeric, this isn't necessarily a problem so we'll leave these observations as they are since it's not immediately obvious what the sensible way to replace instances of ```ca = 4``` would be and, given that we only have ```303``` observations, we don't want to lose data if we can avoid it.
 
 We can use box plots to look at the difference in the these numeric variables when we split the population based on ```sex```:
 
@@ -139,7 +147,7 @@ do.call(grid.arrange, box_plots)
 
 We can see from the box plots that overall there is little difference between male and female patients in the population. The median age of females is slightly higher than males, as is the cholosterol level and maximum heartrate, whilst the ST depression is slightly lower.
 
-It'd be interesting to understand how these variables correlate with the ```target``` variable and we can do this by calculating the point-biserial correlation coefficients:
+It'd be interesting to understand how these variables correlate with the ```target``` variable which indicates whether or not a patient had heart disease (```0``` indicating no heart disease and ```1``` indicating heart disease), and we can do this by calculating the point-biserial correlation coefficients:
 
 ```{r fig.retina = 2, fig.align = 'center'}
 # numerical variables
@@ -236,25 +244,64 @@ cat_plots <- map(
 do.call(grid.arrange, cat_plots)
 ```
 
-A numnber of things stand out from the plots above:
+A number of things stand out from the plots above:
 
-1) There is a noticeably larger proprotion of females in the subset of patients with heart disease;
+* There is a similar proportion of men in both subsets of patients, but a much larger proportion of women with heart disease than without;
 
-2) There is a clear difference between the types of chest pain experienced by those with and those without heart disease. Patients without heart disease primarirly experience typical angina, whilst those with heart disease predomninantly experience nonanginal pain, as well atypical angina, closely followed by typical angina (see [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4468223/) for reference to the types of chest pain measured in this data set);
+* There is a clear difference between the types of chest pain experienced by those with and without heart disease. Patients without heart disease primarily experience typical angina, whilst those with heart disease predomninantly experience nonanginal pain, as well atypical angina, closely followed by typical angina (see [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4468223/) for reference to the types of chest pain measured in this data set);
 
-3) There is almost no difference between the proportion of patients with and without a fasting blood sugar level of greater than 120 mg/dl, between patients with and without heart disease;
+* There is almost no difference in the blood sugar levels of patients with and without heart disease;
 
-4) The proportion of patients with normal ECG results decreases and the proportion with abnomral ECG results increases between patients without heart disease and patients with heart disease;
+* The proportion of patients with normal ECG results decreases and the proportion with abnormal ECG results increases between patients without heart disease and patients with heart disease;
 
-5) The proportion of patients without exercise induced angina is noticeably higher in patients with heart disease;
+* The proportion of patients without exercise induced angina is noticeably higher in patients with heart disease;
 
-6) For patients without heart disease, the slope of the ST curve peak is predominantly flat, whilst for those with heart disease, the curve peak is predominantly downward-sloping; and
+* For patients without heart disease, the slope of the ST curve peak is predominantly flat, whilst for those with heart disease, the curve peak is predominantly downward-sloping; and
 
-7) 
+* Finaly, patients with heart disease primarily display a fixed abnormality in the Thallium-201 stress scintigraphy test, whilst those without heart disease typically display a reversible abnormality. 
+
+It's also noticeable that there looks to be at least one instance in both the "no heart disease" and "heart disease" subsets where ```thal = 0```. The ```thal``` variable is only defined for values ```1```, ```2``` and ```3``` which means we've actually got some missing values, so before we carry on we'll identify those and replace them.
+
+```{r}
+# count the number of observations in each level
+data %>%
+  group_by(thal) %>%
+  summarise(n()) 
+```
+
+As we thought, there are only two instances where ```thal = 0 ```. To replace them, we'll take the most frequent value for patients with and without heart disease, since we already saw from the plots that one of the missing values occurs in the subset of patients with heart disease and the other occurs in the subset without.
+
+```{r}
+# get most frequent level in each group
+data %>%
+  group_by(target, thal) %>%
+  summarise(n())
+```
+
+We can see that for patients without heart disease, the most frequent ```thal``` category is ```3```, whilst for patients with heart disease the most frequent category is ```2```.
+
+```{r}
+# update missing values 
+data %<>%
+  mutate(
+    thal = ifelse(
+      target == 0 & thal == 0,
+      3,
+      ifelse(
+        target == 1 & thal == 0,
+        2,
+        thal
+      )
+    )
+  ) %>%
+  mutate(thal = as.factor(thal))
+```
+
+Now that we've looked at both the continuous and categorical variables in the, we have a better understanding of the data and we can move on to modelling.
 
 ## Training a model
 
-Before we do anything, we're going to write a function to train a model using a given algorithm - the function will:
+We're going to start the modelling process by writing a function to train a model using a given algorithm - the function will:
 
 * Randomly partition the data into train and test sets, allocating 70% of the data to train;
 
@@ -293,7 +340,7 @@ predict_class <- function(data, response, predictors, model_type, family = NULL)
 
 ### Multiple logistic regression
 
-We've now got our data set in a format that's suitable for modelling. This is a binary classification problem since, given the set of patient attributes, we want to answer the question "does the patient have heart disease?". The simplest method (and the method we'll try first), is multiple logistic regression, so let's talk a little about how it works.
+We've now got our data set in a format that's suitable for modelling. This is a binary classification problem since, given the set of patient attributes, we want to answer the question "does the patient have heart disease?". The simplest method (and the one we'll try first), is multiple logistic regression, so let's talk a little about how it works.
 
 With a typical regression model we're trying to predict the value of a continuous response variable, for example, a person's salary given their age and the number of years they spent in higher education. In this case it's completely reasonable get a prediction of say ```27,836.89```. However, for the same reason that we encoded some of the variables in the data set as factors previously, it makes no sense if our model were to predict a value of ```0.768``` in response to the question of whether or not a person has heart disease - they either do or they don't.
 
@@ -318,15 +365,27 @@ model_log <- predict_class(
 model_log$model
 ```
 
-We can see from the above results that the multiple logistic regression model has an accuracy of roughly 84% which is impressive for such a simple model! Let's see which of the features were most influential by looking at the variable importance score:
+We can see from the above results that the multiple logistic regression model has an accuracy of roughly 83% which is impressive for such a simple model! The model has also returned a ```Kappa``` value of roughly ```0.66``` - this is Cohen's kappa which essentially gives a measure of the model accuracy taking into account the likelihood that the model could've classified some observations correctly by chance. Let's see which of the features were most influential by looking at the variable importance scores:
 
 ```{r fig.retina = 2, fig.align = 'center', message = FALSE}
+# get variable importance scores
+var_imp <- varImp(model_log$model)$importance
+
 # plot
-varImp(model_log$model) %>%
-  ggplot(aes(x = rownames(), y = Overall)) + 
-  geom_col(colour = "orange2", fill = "white") + 
+tibble(
+  var = rownames(var_imp),
+  score = var_imp$Overall
+) %>%
+  ggplot(aes(x = reorder(var, score), y = score)) + 
+  geom_col(colour = "#00BFC4", fill = "#00BFC4", alpha = 0.3, width = 0.8) + 
   coord_flip() + 
   xlab(NULL) +
   ylab("Variable Importance Score") + 
   theme_ipsum()
 ```
+
+The most influential predictor in the model is whether or not the patient experienced nonanginal pain, closely followed by whether or not the patient experienced atypical angina, and this ties back to the visualisations we saw previously which showed the proportions of each chest pain type experienced by each subset of patients (heart disease or no heart disease). This is followed by the number of major vessels ```ca```, after which things gradually start to drop off. It's also noticeable that whether or not the patient was male looks to be a fairly important predictor and this is sensible since again we saw in the visualisation that there were significantly more male patients in the "no heart disease" subset than female.
+
+### K-means clustering
+
+### Support vector machines
