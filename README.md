@@ -472,14 +472,22 @@ predict_class <- function(data, response, predictors, model_type, family = NULL)
   
   # train the model
   ctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
-  model <- train(formula, data = train_data, method = model_type, 
+  
+  if(is.null(family)){
+    model <- train(formula, data = train_data, method = model_type, 
+                   trControl = ctrl)
+  } else{
+    model <- train(formula, data = train_data, method = model_type, 
                  family = family, trControl = ctrl)
+  }
   
   # run the model on the test data
   prediction <- model %>%
     predict(test_data)
   
-  results <- list("model" = model, "prediction" = prediction, "test_data" = test_data)
+  results <- list("model" = model, "prediction" = prediction, 
+                  "test_data"  = test_data)
+  
   return(results)
 }
 ```
@@ -489,8 +497,9 @@ predict_class <- function(data, response, predictors, model_type, family = NULL)
 We’ve now got our data set in a format that’s suitable for modelling.
 This is a binary classification problem since, given the set of patient
 attributes, we want to answer the question “does the patient have heart
-disease?”. The simplest method (and the one we’ll try first), is
-multiple logistic regression, so let’s talk a little about how it works.
+disease?”. One of the simplest methods for calssification (and the one
+we’ll try first), is multiple logistic regression, so let’s talk a
+little about how it works.
 
 With a typical regression model we’re trying to predict the value of a
 continuous response variable, for example, a person’s salary given their
@@ -589,6 +598,130 @@ predictor and this is sensible since again we saw in the visualisation
 that there were significantly more male patients in the “no heart
 disease” subset than female.
 
-### K-means clustering
+### Decision tree
 
-### Support vector machines
+Next we’re going to use a decision tree to classify patients. Unlike the
+multiple logistic regression model we used previously, the decision tree
+classifier directly assigns each observation to a specific class, rather
+than assigning a probability.
+
+A decision tree works by posing an initial binary question about the
+data in the root node, then based on the response, splits the data into
+one of two new nodes. At each node, this binary splitting occurs until
+eventually (according to some stopping criteria, e.g. maximum tree
+depth), we reach a terminal node, at which point our prediction is the
+most common classification of the observations in the remaining subset
+of the data in that node.
+
+To select the predictor on which the first split should be made, we
+compare how well each of the features splits the data using a quantity
+known as the *Gini index* which gives us a measure of the impurity of a
+node. A Gini index of `0` would indicate a completely pure node and
+would mean that the node was made up only a single class. The best
+predictor for a given node is the predictor that results in the node
+with the lowest Gini index.
+
+For example, if we were trying to determine which feature to use in the
+root node of the tree, we could take the `fbs` variable and imagine our
+node poses the question “does `fbs = 1`?”. To determine the Gini index
+of the node, we look at how `fbs` splits the data:
+
+``` r
+# look at the split
+data %>%
+  group_by(fbs, target) %>%
+  summarise(n())
+```
+
+    ## # A tibble: 4 x 3
+    ## # Groups:   fbs [2]
+    ##   fbs   target `n()`
+    ##   <fct> <fct>  <int>
+    ## 1 0     0        116
+    ## 2 0     1        142
+    ## 3 1     0         22
+    ## 4 1     1         23
+
+The first branch from the node would be the “yes” response - we can see
+from the table above that when `fbs = 1`, we have a total of `45`
+patients, `23` with heart disease and `22` without. Similarly, in the
+“no” branch we can see a total of `258` patients, `142` with heart
+disease and `116` without. The Gini scores for the nodes are given by:
+
+``` r
+# first node
+gini_1 <- 1 - (23 / (23 + 22))^2 - (22 / (23 + 22))^2
+
+# second node
+gini_2 <- 1 - (116 / (116 + 142))^2 - (142 / (116 + 142))^2
+
+# overall 
+gini_overall <- (45 / (45 + 258)) * gini_1 + (258 / (45 + 258)) * gini_2
+gini_overall
+```
+
+    ## [1] 0.4956396
+
+The overall Gini index for the `fbs` (the weighted averages of the two
+nodes), is therefore `0.496` and we would compare this to the Gini index
+of each of the other predictors to determine whether or not `fbs`
+resulted in the purest node possible. This approach to splitting is
+called *greedy* because at any step, we’re only looking at which feature
+gives the best split there and then, rather than trying to work out
+which feature gives the best over tree further down the line.
+
+Let’s train our tree:
+
+``` r
+set.seed(100)
+
+# train the model
+model_tree <- predict_class(
+  data = data,
+  response = "target",
+  predictors = ".",
+  model_type = "rpart"
+)
+
+# check the accuracy
+model_tree$model
+```
+
+    ## CART 
+    ## 
+    ## 213 samples
+    ##  13 predictor
+    ##   2 classes: '0', '1' 
+    ## 
+    ## No pre-processing
+    ## Resampling: Cross-Validated (10 fold, repeated 5 times) 
+    ## Summary of sample sizes: 192, 191, 191, 192, 192, 192, ... 
+    ## Resampling results across tuning parameters:
+    ## 
+    ##   cp          Accuracy   Kappa    
+    ##   0.03092784  0.7513247  0.4985658
+    ##   0.04123711  0.7533636  0.5046338
+    ##   0.51546392  0.6208831  0.1912991
+    ## 
+    ## Accuracy was used to select the optimal model using the largest value.
+    ## The final value used for the model was cp = 0.04123711.
+
+Again, despite such a relatively simple model, we’ve managed to achieve
+an accuracy of approximately 75%. Whilst this is lower than the 83%
+accuracy we were able to achieve from the multiple logistic regression
+model (a decrease of around 10%), as we’ll see further down, the
+decision tree approach benefits from significantly greater
+interpretability, not least because we can easily visualise the train of
+logic that geos into a classification, and this shouldn’t be
+underestimated, especially for a problem like this where one of the key
+interests may actually be gaining an understanding of the driving
+factors as opposed to raw predictive power.
+
+``` r
+library(rattle)
+
+# visualise the decision tree
+fancyRpartPlot(model_tree$model$finalModel, sub = "")
+```
+
+<img src="README_files/figure-gfm/unnamed-chunk-18-1.png" width="672" style="display: block; margin: auto;" />
