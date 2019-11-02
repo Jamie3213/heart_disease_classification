@@ -577,9 +577,8 @@ modelling the probaility using the logistic function
   
 ![\\rm{Pr}(Y = 1 | \\textbf{X}) = \\frac{e^{\\beta\_0 +
 \\beta\_1\\textbf{X}}}{1 + e^{\\beta\_0 +
-\\beta\_1\\textbf{X}}}](https://latex.codecogs.com/png.latex?%5Crm%7BPr%7D%28Y%20%3D%201%20%7C%20%5Ctextbf%7BX%7D%29%20%3D%20%5Cfrac%7Be%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D%7B1%20%2B%20e%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D
-"\\rm{Pr}(Y = 1 | \\textbf{X}) = \\frac{e^{\\beta_0 + \\beta_1\\textbf{X}}}{1 + e^{\\beta_0 + \\beta_1\\textbf{X}}}")  
-,
+\\beta\_1\\textbf{X}}},](https://latex.codecogs.com/png.latex?%5Crm%7BPr%7D%28Y%20%3D%201%20%7C%20%5Ctextbf%7BX%7D%29%20%3D%20%5Cfrac%7Be%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D%7B1%20%2B%20e%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D%2C
+"\\rm{Pr}(Y = 1 | \\textbf{X}) = \\frac{e^{\\beta_0 + \\beta_1\\textbf{X}}}{1 + e^{\\beta_0 + \\beta_1\\textbf{X}}},")  
 
 where ![\\textbf{X} = (X\_1, X\_2, \\ldots,
 X\_p)](https://latex.codecogs.com/png.latex?%5Ctextbf%7BX%7D%20%3D%20%28X_1%2C%20X_2%2C%20%5Cldots%2C%20X_p%29
