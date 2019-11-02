@@ -358,7 +358,7 @@ With a typical regression model we're trying to predict the value of a continuou
 
 With multiple logistic regression, rather than predicting a ```0``` or a ```1```, we predict the probability that an observation belongs to one of the categories. We could use multiple linear regression to model this probability, but this approach suffers from the fact that we could return probabilities that were either less than ```0``` or greater than ```1```, and these probabilities would be essentially meangingless. Multiple logistic regression avoids this problem by constraining all predictions to the interval $[0,1]$ by modelling the probaility using the logistic function
 
-  $$\rm{Pr}(Y = 1 | \textbf{X}) = \frac{e^{\beta_0 + \beta_1\textbf{X}}}{1 + e^{\beta_0 + \beta_1\textbf{X}}}$$,
+  $$\rm{Pr}(Y = 1 | \textbf{X}) = \frac{e^{\beta_0 + \beta_1\textbf{X}}}{1 + e^{\beta_0 + \beta_1\textbf{X}}},$$
   
 where $\textbf{X} = (X_1, X_2, \ldots, X_p)$ is the vector of $p$ predictors. We'll use the ```caret``` library and the function we wrote above to train a multiple logistic regression model. In general if we don't have any domain knowledge which suggests that all the features in our data set should be important in our model, then we might want to find an optimal feature set, but since we have good reason to believe that each of the features in the data set are indicators of heart disease, we'll proceed to use them all.
 
