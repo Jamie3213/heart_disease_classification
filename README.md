@@ -337,14 +337,17 @@ tibble(
 <img src="README_files/figure-gfm/unnamed-chunk-8-1.png" width="672" style="display: block; margin: auto;" />
 
 We can see that all the correlations are significant (i.e. have a
-*p*-value less than 5%), except for the correlation with cholesterol,
-however this is a weak correlation regardless. In fact in general the
-correlations are mostly weak, though there are moderate correlations (~
-0.4 in absolute value), with both the maximum heartrate `thalach` and
-the ST depression `oldpeak`. We can interpret this to mean that moving
-from a diagnosis of “does not have heart disease” to “has heart disease”
-is typically associated with an increase in maximum heartrate and a
-decrease in ST depression.
+![p](https://latex.codecogs.com/png.latex?p "p")-value less than
+![5\\%](https://latex.codecogs.com/png.latex?5%5C%25 "5\\%")), except
+for the correlation with cholesterol, however this is a weak correlation
+regardless. In fact in general the correlations are mostly weak, though
+there are moderate correlations
+(![\\approx0.4](https://latex.codecogs.com/png.latex?%5Capprox0.4
+"\\approx0.4") in absolute value), with both the maximum heartrate
+`thalach` and the ST depression `oldpeak`. We can interpret this to mean
+that moving from a diagnosis of “does not have heart disease” to “has
+heart disease” is typically associated with an increase in maximum
+heartrate and a decrease in ST depression.
 
 ### Categorical variables
 
@@ -373,9 +376,10 @@ data %>%
 
 From the above plot, we can see that there are slightly more patients
 with heart disease than without, though the data set isn’t massively
-skewed, with only a 9% difference. Similarly, we can look at the
-proportion of patients in each of a variable’s categories for heart
-disease vs. no heart disease:
+skewed, with only a ![9\\%](https://latex.codecogs.com/png.latex?9%5C%25
+"9\\%") difference. Similarly, we can look at the proportion of patients
+in each of a variable’s categories for heart disease vs. no heart
+disease:
 
 ``` r
 # get the categorical variables
@@ -422,11 +426,11 @@ A number of things stand out from the plots above:
 
   - There is a clear difference between the types of chest pain
     experienced by those with and without heart disease. Patients
-    without heart disease primarily experience typical angina, whilst
-    those with heart disease predomninantly experience nonanginal pain,
-    as well atypical angina, closely followed by typical angina (see
+    without heart disease primarily experience typical angina (`cp
+    = 0`), whilst those with heart disease predomninantly experience
+    nonanginal pain (`cp = 3`) - see
     [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4468223/) for
-    reference to the types of chest pain measured in this data set);
+    reference to the types of chest pain measured in this data set;
 
   - There is almost no difference in the blood sugar levels of patients
     with and without heart disease;
@@ -523,27 +527,83 @@ To create a model we’ll randomly partition the data into train and test
 sets, allocating ![70\\%](https://latex.codecogs.com/png.latex?70%5C%25
 "70\\%") of the data to train, then train a model using repeated
 ![k](https://latex.codecogs.com/png.latex?k "k")-fold cross validation.
-Under cross validation, we take the training set and randomly partition
-it into ![k](https://latex.codecogs.com/png.latex?k "k") equally sized
-folds (or groups). We then select one fold to use as a validation set
-and train a model on the remaining
+Under this method, we take the training set and randomly partition it
+into ![k](https://latex.codecogs.com/png.latex?k "k") approximately
+equally sized folds (or groups). We then select one fold to use as a
+validation or hold out set and train a model on the remaining
 ![k-1](https://latex.codecogs.com/png.latex?k-1 "k-1") folds. We repeat
 the process, each time using a different fold as a validation set so
 that in total each fold is used once as a validation set and
 ![k-1](https://latex.codecogs.com/png.latex?k-1 "k-1") times as a
-training set. After this, we end up with a total of
-![k](https://latex.codecogs.com/png.latex?k "k") models and calculate
-the cross validated error by taking the average over the errors of each
-individual model which provides us with an estimate of the true error.
-Since we’re using *repeated* ![k](https://latex.codecogs.com/png.latex?k
+training set. We then compute the cross validated error by taking the
+average over the errors of each individual model so that the cross
+validated error over ![k](https://latex.codecogs.com/png.latex?k "k")
+models,
+![CV\_{(k)}](https://latex.codecogs.com/png.latex?CV_%7B%28k%29%7D
+"CV_{(k)}") is given by
+
+<center>
+
+![CV\_{(k)} = \\frac{1}{k} \\sum\_{i=1}^k
+\\textrm{Err}\_i,](https://latex.codecogs.com/png.latex?CV_%7B%28k%29%7D%20%3D%20%5Cfrac%7B1%7D%7Bk%7D%20%5Csum_%7Bi%3D1%7D%5Ek%20%5Ctextrm%7BErr%7D_i%2C
+"CV_{(k)} = \\frac{1}{k} \\sum_{i=1}^k \\textrm{Err}_i,")
+
+</center>
+
+where
+![\\textrm{Err}\_i](https://latex.codecogs.com/png.latex?%5Ctextrm%7BErr%7D_i
+"\\textrm{Err}_i") is the classification error of the
+![i](https://latex.codecogs.com/png.latex?i "i")th model, i.e. the
+proportion of observations incorrectly classified. For a training set
+consisting of ![n](https://latex.codecogs.com/png.latex?n "n")
+observations, the classification error is defined by
+
+<center>
+
+![\\textrm{Err} = \\frac{1}{n}\\sum\_{i=1}^n
+I\_i,](https://latex.codecogs.com/png.latex?%5Ctextrm%7BErr%7D%20%3D%20%5Cfrac%7B1%7D%7Bn%7D%5Csum_%7Bi%3D1%7D%5En%20I_i%2C
+"\\textrm{Err} = \\frac{1}{n}\\sum_{i=1}^n I_i,")
+
+</center>
+
+where
+
+<center>
+
+![I\_i = \\begin{cases} 0, &\\text{if } y\_i = \\hat{y}\_i\\\\ 1,
+&\\text{if } y\_i \\neq
+\\hat{y\_i}\\end{cases},](https://latex.codecogs.com/png.latex?I_i%20%3D%20%5Cbegin%7Bcases%7D%200%2C%20%26%5Ctext%7Bif%20%7D%20y_i%20%3D%20%5Chat%7By%7D_i%5C%5C%201%2C%20%26%5Ctext%7Bif%20%7D%20y_i%20%5Cneq%20%5Chat%7By_i%7D%5Cend%7Bcases%7D%2C
+"I_i = \\begin{cases} 0, &\\text{if } y_i = \\hat{y}_i\\\\ 1, &\\text{if } y_i \\neq \\hat{y_i}\\end{cases},")
+
+</center>
+
+and where ![y\_i](https://latex.codecogs.com/png.latex?y_i "y_i") is the
+actual value of the ![i](https://latex.codecogs.com/png.latex?i "i")th
+training observation and
+![\\hat{y}\_i](https://latex.codecogs.com/png.latex?%5Chat%7By%7D_i
+"\\hat{y}_i") is the predicted value of the
+![i](https://latex.codecogs.com/png.latex?i "i")th training observation.
+Since we’re using repeated ![k](https://latex.codecogs.com/png.latex?k
 "k")-fold cross validation, we then repeat the process
 ![N](https://latex.codecogs.com/png.latex?N "N") times and take the
-final cross validated error to be the average of each of the individual
-cross validated errors - we’ll take ![k
+final cross validated error
+![RCV\_{(N)}](https://latex.codecogs.com/png.latex?RCV_%7B%28N%29%7D
+"RCV_{(N)}") to be the average of each of the individual cross validated
+errors
+
+<center>
+
+![RCV\_{(N)} = \\frac{1}{N} \\sum\_{i=0}^N
+CV\_{(i)}.](https://latex.codecogs.com/png.latex?RCV_%7B%28N%29%7D%20%3D%20%5Cfrac%7B1%7D%7BN%7D%20%5Csum_%7Bi%3D0%7D%5EN%20CV_%7B%28i%29%7D.
+"RCV_{(N)} = \\frac{1}{N} \\sum_{i=0}^N CV_{(i)}.")
+
+</center>
+
+Throughout, we’ll take ![k
 = 10](https://latex.codecogs.com/png.latex?k%20%3D%2010 "k = 10") and
 ![N = 5](https://latex.codecogs.com/png.latex?N%20%3D%205 "N = 5"). This
-then gives us a robust way to compare the accuracy of different types of
-models.
+then gives us a robust way to compare the performance of different
+models based on an estimate of the test error.
 
 ### Multiple logistic regression
 
@@ -559,7 +619,7 @@ continuous response variable, for example, a person’s salary given their
 age and the number of years they spent in higher education. In this case
 it’s completely reasonable get a prediction of say `27,836.89`. However,
 for the same reason that we encoded some of the variables in the data
-set as factors previously, it makes no sense if our model were to
+set as characters previously, it makes no sense if our model were to
 predict a value of `0.768` in response to the question of whether or not
 a person has heart disease - they either do or they don’t.
 
@@ -571,26 +631,34 @@ return probabilities that were either less than `0` or greater than `1`,
 and these probabilities would be essentially meangingless. Multiple
 logistic regression avoids this problem by constraining all predictions
 to the interval
-![\[0,1\]](https://latex.codecogs.com/png.latex?%5B0%2C1%5D "[0,1]") by
+![\[0,1\]](https://latex.codecogs.com/png.latex?%5B0%2C1%5D "[0,1]"),
 modelling the probaility using the logistic function
 
-  
-![\\rm{Pr}(Y = 1 | \\textbf{X}) = \\frac{e^{\\beta\_0 +
-\\beta\_1\\textbf{X}}}{1 + e^{\\beta\_0 +
-\\beta\_1\\textbf{X}}},](https://latex.codecogs.com/png.latex?%5Crm%7BPr%7D%28Y%20%3D%201%20%7C%20%5Ctextbf%7BX%7D%29%20%3D%20%5Cfrac%7Be%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D%7B1%20%2B%20e%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D%2C
-"\\rm{Pr}(Y = 1 | \\textbf{X}) = \\frac{e^{\\beta_0 + \\beta_1\\textbf{X}}}{1 + e^{\\beta_0 + \\beta_1\\textbf{X}}},")  
+<center>
+
+![p(\\textbf{X})= \\frac{e^{\\beta\_0 + \\beta\_1\\textbf{X}}}{1 +
+e^{\\beta\_0 +
+\\beta\_1\\textbf{X}}},](https://latex.codecogs.com/png.latex?p%28%5Ctextbf%7BX%7D%29%3D%20%5Cfrac%7Be%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D%7B1%20%2B%20e%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D%2C
+"p(\\textbf{X})= \\frac{e^{\\beta_0 + \\beta_1\\textbf{X}}}{1 + e^{\\beta_0 + \\beta_1\\textbf{X}}},")
+
+</center>
 
 where ![\\textbf{X} = (X\_1, X\_2, \\ldots,
 X\_p)](https://latex.codecogs.com/png.latex?%5Ctextbf%7BX%7D%20%3D%20%28X_1%2C%20X_2%2C%20%5Cldots%2C%20X_p%29
 "\\textbf{X} = (X_1, X_2, \\ldots, X_p)") is the vector of
-![p](https://latex.codecogs.com/png.latex?p "p") predictors. We’ll use
-the `caret` library and the function we wrote above to train a multiple
-logistic regression model. In general if we don’t have any domain
-knowledge which suggests that all the features in our data set should be
-important in our model, then we might want to find an optimal feature
-set, but since we have good reason to believe that each of the features
-in the data set are indicators of heart disease, we’ll proceed to use
-them all.
+![p](https://latex.codecogs.com/png.latex?p "p") predictors and
+![p(\\textbf{X}) = \\rm{Pr}(Y = 1 \\,|\\,
+\\textbf{X})](https://latex.codecogs.com/png.latex?p%28%5Ctextbf%7BX%7D%29%20%3D%20%5Crm%7BPr%7D%28Y%20%3D%201%20%5C%2C%7C%5C%2C%20%5Ctextbf%7BX%7D%29
+"p(\\textbf{X}) = \\rm{Pr}(Y = 1 \\,|\\, \\textbf{X})") is the
+probability that the response variable (in this case `target`), takes a
+value of ![1](https://latex.codecogs.com/png.latex?1 "1") given some
+![X\_i](https://latex.codecogs.com/png.latex?X_i "X_i"). We’ll use the
+`caret` library to train a multiple logistic regression model. In
+general if we don’t have any domain knowledge which suggests that all
+the features in our data set should be important in our model, then we
+might want to find an optimal feature set, but since we have good reason
+to believe that each of the features in the data set are indicators of
+heart disease, we’ll use them all.
 
 ``` r
 library(caret)
@@ -632,13 +700,14 @@ model_log
     ##   0.8359524  0.6687658
 
 We can see from the above results that the multiple logistic regression
-model has an accuracy of roughly 84% which is impressive for such a
-simple model\! The model has also returned a `Kappa` value of roughly
-`0.67` - this is Cohen’s kappa which essentially gives a measure of the
-model accuracy taking into account the likelihood that the model
-could’ve classified some observations correctly by chance. Let’s see
-which of the features were most influential by looking at the variable
-importance scores:
+model has an accuracy of roughly
+![84\\%](https://latex.codecogs.com/png.latex?84%5C%25 "84\\%") which is
+impressive for such a simple model\! The model has also returned a
+`Kappa` value of roughly `0.67` - this is Cohen’s kappa which
+essentially gives a measure of the model accuracy taking into account
+the likelihood that the model could’ve classified some observations
+correctly by chance. Let’s see which of the features were most
+influential by looking at the variable importance scores:
 
 ``` r
 # get variable importance scores
@@ -660,16 +729,16 @@ tibble(
 <img src="README_files/figure-gfm/unnamed-chunk-15-1.png" width="672" style="display: block; margin: auto;" />
 
 The most influential predictor in the model is whether or not the
-patient experienced nonanginal pain, closely followed by whether or not
-the patient experienced atypical angina, and this ties back to the
-visualisations we saw previously which showed the proportions of each
-chest pain type experienced by each subset of patients (heart disease or
-no heart disease). This is followed by the number of major vessels `ca`,
-after which things gradually start to drop off. It’s also noticeable
-that whether or not the patient was male looks to be a fairly important
-predictor and this is sensible since again we saw in the visualisation
-that there were significantly more male patients in the “no heart
-disease” subset than female.
+patient experienced nonanginal pain (`cp = 3`), closely followed by
+whether or not they experienced atypical angina (`cp = 2`), and this
+ties back to the visualisations we saw previously which showed the
+proportions of each chest pain type experienced by each subset of
+patients (heart disease or no heart disease). This is followed by the
+number of major vessels `ca`, after which things gradually start to drop
+off. It’s also noticeable that whether or not the patient was male (`sex
+= 1`), looks to be a fairly important predictor and this is sensible
+since again we saw in the visualisation that there were significantly
+more male patients in the “no heart disease” subset than female.
 
 ### Decision tree
 
@@ -680,24 +749,39 @@ than assigning a probability.
 
 A decision tree works by posing an initial binary question about the
 data in the root node, then based on the response, splits the data into
-one of two new nodes. At each node, this binary splitting occurs until
-eventually (according to some stopping criteria, e.g. maximum tree
-depth), we reach a terminal node, at which point our prediction is the
-most common classification of the observations in the remaining subset
-of the data in that node.
+one of two leaf nodes. At each node, this binary splitting occurs until
+eventually (according to some stopping criteria, e.g. maximum tree depth
+or a complexity parameter), we reach a terminal node, at which point our
+prediction is the most common classification of the observations in the
+remaining subset of the data in that node.
 
 To select the predictor on which the first split should be made, we
 compare how well each of the features splits the data using a quantity
 known as the *Gini index* which gives us a measure of the impurity of a
-node. A Gini index of `0` would indicate a completely pure node and
-would mean that the node was made up only a single class. The best
-predictor for a given node is the predictor that results in the node
-with the lowest Gini index.
+node (though there are alternative splitting criteria such as
+cross-entropy). A Gini index of `0` would indicate a completely pure
+node and would mean that the node was made up only a single class. The
+best predictor for a given node is the predictor that results in the
+lowest Gini index. For a given node containing
+![K](https://latex.codecogs.com/png.latex?K "K") distinct classes, the
+Gini index, ![G](https://latex.codecogs.com/png.latex?G "G"), is defined
+by
 
-For example, if we were trying to determine which feature to use in the
-root node of the tree, we could take the `fbs` variable and imagine our
-node poses the question “does `fbs = 1`?”. To determine the Gini index
-of the node, we look at how `fbs` splits the data:
+<center>
+
+![G = 1 - \\sum\_{i=1}^K
+p\_i^2,](https://latex.codecogs.com/png.latex?G%20%3D%201%20-%20%5Csum_%7Bi%3D1%7D%5EK%20p_i%5E2%2C
+"G = 1 - \\sum_{i=1}^K p_i^2,")
+
+</center>
+
+where ![p\_i](https://latex.codecogs.com/png.latex?p_i "p_i") is the
+proportion of samples of class
+![i](https://latex.codecogs.com/png.latex?i "i"). For example, if we
+were trying to determine which feature to use in the root node of the
+tree, we could take the `fbs` variable and imagine our node poses the
+question “does `fbs = 1`?”. To determine the Gini index of the node, we
+look at how `fbs` splits the data:
 
 ``` r
 # look at the split
@@ -719,14 +803,19 @@ The first branch from the node would be the “yes” response - we can see
 from the table above that when `fbs = 1`, we have a total of `45`
 patients, `23` with heart disease and `22` without. Similarly, in the
 “no” branch we can see a total of `258` patients, `142` with heart
-disease and `116` without. The Gini scores for the nodes are given by:
+disease and `116` without. This is a little easier to see
+visually:
+
+<img src="README_files/figure-gfm/unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
+
+The Gini scores for the leaf nodes are given by:
 
 ``` r
 # first node
-gini_1 <- 1 - (23 / (23 + 22))^2 - (22 / (23 + 22))^2
+gini_1 <- 1 - (23 / 45)^2 - (22 / 45)^2
 
 # second node
-gini_2 <- 1 - (116 / (116 + 142))^2 - (142 / (116 + 142))^2
+gini_2 <- 1 - (116 / 258)^2 - (142 / 258)^2
 
 # overall 
 gini_overall <- (45 / (45 + 258)) * gini_1 + (258 / (45 + 258)) * gini_2
@@ -735,15 +824,78 @@ gini_overall
 
     ## [1] 0.4956396
 
-The overall Gini index for the `fbs` (the weighted averages of the two
-nodes), is therefore `0.496` and we would compare this to the Gini index
-of each of the other predictors to determine whether or not `fbs`
-resulted in the purest node possible. This approach to splitting is
-called *greedy* because at any step, we’re only looking at which feature
-gives the best split there and then, rather than trying to work out
-which feature gives the best over tree further down the line.
+The overall Gini index for the `fbs` node (the weighted averages of the
+two leaf nodes), is therefore `0.496` and we would compare this to the
+Gini index of each of the other predictors to determine whether or not
+`fbs` resulted in the purest node possible. This approach to splitting
+is called *greedy* because at any step, we’re only looking at which
+feature gives the best split there and then, rather than trying to work
+out which feature is best over the tree further down the line.
 
-Let’s train our tree:
+The `fbs` variable is categorical but we can calculate the Gini index of
+a continuous variable in a similar way. Say we want to calculate the
+index for `chol`, we first need to decide what threshold to consider as
+our criteria, since the node needs to perform a binary split. To do this
+we first order the values of `chol` from smallest to largest:
+
+``` r
+# arrange cholesterol from lowest to highest
+chol_order <- data %>%
+  select(chol) %>%
+  arrange(chol)
+
+chol_order %>%
+  head()
+```
+
+    ## # A tibble: 6 x 1
+    ##    chol
+    ##   <dbl>
+    ## 1   126
+    ## 2   131
+    ## 3   141
+    ## 4   149
+    ## 5   149
+    ## 6   157
+
+We then calculate the average of values one and two, then of values two
+and three and so on:
+
+``` r
+# calculate pairwise means
+chol_order %<>%
+  mutate(lagged_mean = 0.5 * (chol + lag(chol))) %>%
+  mutate(lagged_mean = round(lagged_mean, 1))
+
+chol_order %>%
+  head()
+```
+
+    ## # A tibble: 6 x 2
+    ##    chol lagged_mean
+    ##   <dbl>       <dbl>
+    ## 1   126         NA 
+    ## 2   131        128.
+    ## 3   141        136 
+    ## 4   149        145 
+    ## 5   149        149 
+    ## 6   157        153
+
+We would then use each value of `lagged_mean` as the threshold in a
+node, i.e. we’d take a node which asked “is `chol < 128.5`?”, “is `chol
+< 136`?” etc. For each of those nodes we’d then calculate the Gini index
+like we did above and this would tell us which value of `chol` to use as
+the threshold value. Once we know the threshold value, we can compare
+its Gini index to the index of the various other variables like `fbs` to
+decide if it should be in our root node.
+
+Finally, there are also variables in our data set like `thal` which can
+take values of `1`, `2` or `3`. For these kinds of variables we work out
+the Gini index by splitting on each combination of the variable. In the
+case of `thal`, `thal = 1`, `thal = 2`, `thal = 3`, `thal = 1` or `thal
+= 2`, `thal = 1` or `thal = 3`, or `thal = 2` or `thal = 3`.
+
+Let’s now move on and train our tree:
 
 ``` r
 set.seed(100)
@@ -780,15 +932,19 @@ model_tree
     ## The final value used for the model was cp = 0.01546392.
 
 Again, despite such a relatively simple model, we’ve managed to achieve
-an accuracy of approximately 76%. Whilst this is lower than the 84%
+an accuracy of approximately
+![76\\%](https://latex.codecogs.com/png.latex?76%5C%25 "76\\%"). Whilst
+this is decrease in accuracy of roughly
+![10\\%](https://latex.codecogs.com/png.latex?10%5C%25 "10\\%") compared
+to the ![84\\%](https://latex.codecogs.com/png.latex?84%5C%25 "84\\%")
 accuracy we were able to achieve from the multiple logistic regression
-model (a decrease of around 10%), as we’ll see further down, the
-decision tree approach benefits from significantly greater
-interpretability, not least because we can easily visualise the train of
-logic that geos into a classification, and this shouldn’t be
-underestimated, especially for a problem like this where one of the key
-interests may actually be gaining an understanding of the driving
-factors behind heart disease as opposed to raw predictive power.
+model, as we’ll see further down, the decision tree approach benefits
+from significantly greater interpretability, not least because we can
+easily visualise the train of logic that goes into a classification, and
+this shouldn’t be underestimated, especially for a problem like this
+where one of the key interests may actually be gaining an understanding
+of the driving factors behind heart disease as opposed to purely the raw
+predictive power of the model.
 
 ``` r
 library(rattle)
@@ -797,16 +953,25 @@ library(rattle)
 fancyRpartPlot(model_tree$finalModel, sub = "")
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-19-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-22-1.png" width="672" style="display: block; margin: auto;" />
 
 We can see from the visualisation of the final decision tree that
 `thal`, `cp`, `oldpeak` and `thalach` are the only predictors considered
 when classifying the patient. This isn’t totally desimilar to the top
 features selected using the multiple logistic regression model, though
 our tree hasn’t used the number of major vessels `ca`. We can see that
-85% of patients with a fixed defect, `thal = 2`, were categorised has
-having heart disease, though the ST depression `oldpeak` is a necessary
-differentiator. Similarly, 74% of patients with either normal or
-reversible defects, `thal = 1` or `thal = 3`, are ultimately categorised
-as not having heart disease, though here two additional categories are
-necessary.
+![85\\%](https://latex.codecogs.com/png.latex?85%5C%25 "85\\%") of
+patients with a fixed defect, `thal = 2`, were categorised has having
+heart disease, though the ST depression `oldpeak` is a necessary
+differentiator. Similarly,
+![74\\%](https://latex.codecogs.com/png.latex?74%5C%25 "74\\%") of
+patients with either normal or reversible defects, `thal = 1` or `thal
+= 3`, are ultimately categorised as not having heart disease, though
+here two additional categories are necessary, namely the type of chest
+pain `cp` and maximum heart rate `thalach`. This makes sense since in
+the visualisations we looked at previously, we saw that the vast
+majority of patients without hard disease had `cp = 0`, and from the
+point-biserial correlation coefficients we saw moving from `target = 0`
+to `target = 1` was associated with an increase in `thalach`.
+
+### Linear discriminant analysis
