@@ -4,11 +4,12 @@ Jamie Hargreaves
 
 ## Loading the data
 
-We’re going to use a [dataset taken from
+For this project we’re going to use a [dataset taken from
 Kaggle](https://www.kaggle.com/ronitf/heart-disease-uci) which contains
-details of the attributes of patients admitted to hospital with
-suspected heart problems, along with a flag indicating whether or not
-the patient ultimately received a diagnosis of heart disease.
+the attributes of patients admitted to hospital with suspected heart
+problems, along with a flag indicating whether or not the patient
+ultimately received a diagnosis of heart disease. We’ll start by reading
+the data:
 
 ``` r
 library(tidyverse)
@@ -19,7 +20,7 @@ data <- read_csv("heart.csv")
 
 ## Exploratory analysis
 
-Let’s start to dig a little deeper into the data set:
+Let’s look at the data quality and variable types:
 
 ``` r
 # check the type of each column and for the number of NAs
@@ -71,29 +72,30 @@ variables have been identified as numeric, this doesn’t really make
 sense since a number are actually integer representations of categorical
 variables, for example, the chest pain type `cp` can take values of `0`,
 `1`, `2` or `3`, but a value of say `2.6` doesn’t really mean anything.
-We therefore need to convert variables like this to factors:
+We therefore need to convert variables like this to categorical
+variables:
 
 ``` r
 library(magrittr)
 
-# convert relevant variables to factors
+# convert relevant variables to characters
 data %<>%
   mutate(
-    sex = as.factor(sex),
-    cp = as.factor(cp),
-    fbs = as.factor(fbs),
-    restecg = as.factor(restecg),
-    exang = as.factor(exang),
-    slope = as.factor(slope),
-    thal = as.factor(thal),
-    target = as.factor(target)
+    sex = as.character(sex),
+    cp = as.character(cp),
+    fbs = as.character(fbs),
+    restecg = as.character(restecg),
+    exang = as.character(exang),
+    slope = as.character(slope),
+    thal = as.character(thal),
+    target = as.character(target)
   )
 ```
 
 ### Continuous variables
 
-Let’s first look at the continuous variables in the data, we’ll start by
-looking at their distribution:
+We’ll begin our analysis by looking at the continuous variables in the
+data, starting with their distribution:
 
 ``` r
 library(hrbrthemes)
@@ -127,7 +129,8 @@ From the plots we can see that:
 
   - Patients in the sample population are most likely to be in their
     late 50s, though we can also see a smaller peak in the density curve
-    in the mid-40s, as well;
+    in the mid-40s and in general ages range anywhere between very late
+    20s to late 70s;
 
   - The resting blood pressure `trestbps` of patients has a peak around
     `130`, though from the histogram we can see some large groupings
@@ -135,9 +138,8 @@ From the plots we can see that:
     drop;
 
   - The distributions for both cholesterol `chol` and maximum heart rate
-    `thalach` look to be fairly normal (though there’s a slight bumb in
-    the heart rate curve), with peaks around `240` and `160`,
-    respectively;
+    `thalach` look to be fairly smooth with peaks around `240` and
+    `160`, respectively;
 
   - The histogram for ST depression `oldpeak` (a measurement taken from
     an electrocardiogram), is heavily concentrated at `0`, though has a
@@ -201,7 +203,93 @@ do.call(grid.arrange, box_plots)
 We can see from the box plots that overall there is little difference
 between male and female patients in the population. The median age of
 females is slightly higher than males, as is the cholosterol level and
-maximum heartrate, whilst the ST depression is slightly lower.
+maximum heartrate, whilst the ST depression is slightly lower. Whilst
+the difference might not be large in magnitude, we can check if the
+differences are statistically significant, i.e. whether we’re likely to
+observe them in a world where there really was no difference. How we do
+that depends on the distributions of the variables, if they’re normally
+distributed then we can use an unpaired two-samples t-test, whereas if
+the variables are non-normally distributed, then we’ll use a two-samples
+Wilcoxon rank test. We therefore need to check for normality in each
+variable split between male and female
+subsets:
+
+``` r
+# Shapiro-Wilk test for normality, p > 0.05 ==> data normally distributed
+num_vars <- data %>%
+  select_if(is.numeric) %>%
+  names()
+
+data %>%
+  group_by(sex) %>%
+  group_split() %>%
+  map_df(
+    function(x){
+      tibble(
+        sex = unlist(rep(distinct(x[, "sex"]), length(num_vars))),
+        var = num_vars,
+        p.value = map_dbl(
+          num_vars,
+          function(y){
+            shapiro.test(x[[y]])$p.value
+          }
+        ),
+        is.normal = ifelse(p.value > 0.05, "yes", "no")
+      )
+    }
+  )
+```
+
+    ## # A tibble: 12 x 4
+    ##    sex   var       p.value is.normal
+    ##    <chr> <chr>       <dbl> <chr>    
+    ##  1 0     age      1.39e- 1 yes      
+    ##  2 0     trestbps 6.32e- 3 no       
+    ##  3 0     chol     3.02e- 5 no       
+    ##  4 0     thalach  4.75e- 4 no       
+    ##  5 0     oldpeak  7.89e-11 no       
+    ##  6 0     ca       1.45e-13 no       
+    ##  7 1     age      4.00e- 2 no       
+    ##  8 1     trestbps 1.07e- 4 no       
+    ##  9 1     chol     5.27e- 1 yes      
+    ## 10 1     thalach  8.71e- 3 no       
+    ## 11 1     oldpeak  1.90e-12 no       
+    ## 12 1     ca       2.41e-17 no
+
+Whilst two of the variables (female `age` and male `chol`) are normally
+distributed, those same variables are non-normally distributed for the
+opposite sex and the other variables in the data set are also
+non-normally distributed, so we’ll opt for the two-samples Wilcoxon rank
+test:
+
+``` r
+# calculate the Wilcoxon test statistic, p > 0.05 ==> insignificant
+tibble(
+  var = num_vars,
+  p.value = map_dbl(
+    num_vars,
+    function(x){
+     wilcox.test(as.formula(paste0(x, "~ sex")), data = data)$p.value
+    }
+  ),
+  is.sig = ifelse(p.value < 0.05, "yes", "no")
+)
+```
+
+    ## # A tibble: 6 x 3
+    ##   var      p.value is.sig
+    ##   <chr>      <dbl> <chr> 
+    ## 1 age      0.0851  no    
+    ## 2 trestbps 0.358   no    
+    ## 3 chol     0.00856 yes   
+    ## 4 thalach  0.489   no    
+    ## 5 oldpeak  0.0802  no    
+    ## 6 ca       0.0381  yes
+
+We can see that the difference in median cholesterol `chol` and median
+number of major vessels `ca` for males and females is significant,
+whilst the differences between the remaining medians aren’t
+statistically significant.
 
 It’d be interesting to understand how these variables correlate with the
 `target` variable which indicates whether or not a patient had heart
@@ -234,7 +322,9 @@ tibble(
     }
   )
 ) %>%
-  ggplot(aes(x = var, y = corr, fill = factor(is.sig, levels = c(0,1), label = c("No", "Yes")), colour = ..fill..)) +
+  ggplot(aes(x = var, y = corr, fill = factor(is.sig, levels = c(0,1), 
+                                              label = c("No", "Yes")), 
+                                              colour = ..fill..)) +
   geom_col(alpha = 0.3) + 
   coord_flip() + 
   scale_fill_discrete(name = "Is significant?") + 
@@ -244,7 +334,7 @@ tibble(
   theme_ipsum()
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-8-1.png" width="672" style="display: block; margin: auto;" />
 
 We can see that all the correlations are significant (i.e. have a
 *p*-value less than 5%), except for the correlation with cholesterol,
@@ -259,7 +349,7 @@ decrease in ST depression.
 ### Categorical variables
 
 We’ve done some analysis of the numeric variables in the data set, so
-now let’s move on to looking at the categorical variables. A key fist
+now let’s move on to looking at the categorical variables. A key first
 question is how skewed is our data set towards either people with heart
 disease or those without?
 
@@ -279,7 +369,7 @@ data %>%
   theme_ipsum()
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-7-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-9-1.png" width="672" style="display: block; margin: auto;" />
 
 From the above plot, we can see that there are slightly more patients
 with heart disease than without, though the data set isn’t massively
@@ -290,7 +380,7 @@ disease vs. no heart disease:
 ``` r
 # get the categorical variables
 cat_vars <- data %>%
-  select_if(is.factor) %>%
+  select_if(is.character) %>%
   select(-one_of("target"))
 
 # plots
@@ -322,7 +412,7 @@ cat_plots <- map(
 do.call(grid.arrange, cat_plots)
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-8-1.png" width="960" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-10-1.png" width="960" style="display: block; margin: auto;" />
 
 A number of things stand out from the plots above:
 
@@ -372,7 +462,7 @@ data %>%
 
     ## # A tibble: 4 x 2
     ##   thal  `n()`
-    ##   <fct> <int>
+    ##   <chr> <int>
     ## 1 0         2
     ## 2 1        18
     ## 3 2       166
@@ -394,7 +484,7 @@ data %>%
     ## # A tibble: 8 x 3
     ## # Groups:   target [2]
     ##   target thal  `n()`
-    ##   <fct>  <fct> <int>
+    ##   <chr>  <chr> <int>
     ## 1 0      0         1
     ## 2 0      1        12
     ## 3 0      2        36
@@ -413,91 +503,54 @@ frequent category is `2`.
 data %<>%
   mutate(
     thal = ifelse(
-      target == 0 & thal == 0,
-      3,
+      target == "0" & thal == "0",
+      "3",
       ifelse(
-        target == 1 & thal == 0,
-        2,
+        target == "1" & thal == "0",
+        "2",
         thal
       )
     )
-  ) %>%
-  mutate(thal = as.factor(thal))
+  )
 ```
 
-Now that we’ve looked at both the continuous and categorical variables
-in the, we have a better understanding of the data and we can move on to
-modelling.
+Now that we’ve looked at both the continuous and categorical variables,
+we have a better understanding of the data and can move on to modelling.
 
 ## Training a model
 
-We’re going to start the modelling process by writing a function to
-train a model using a given algorithm - the function will:
-
-  - Randomly partition the data into train and test sets, allocating 70%
-    of the data to train;
-
-  - Train the specified model using repeated *k*-fold cross validation;
-
-  - Predict on the test data using the model selected under cross
-    validation; and
-
-  - Return the final model, the predictions and the test data.
-
+To create a model we’ll randomly partition the data into train and test
+sets, allocating ![70\\%](https://latex.codecogs.com/png.latex?70%5C%25
+"70\\%") of the data to train, then train a model using repeated
+![k](https://latex.codecogs.com/png.latex?k "k")-fold cross validation.
 Under cross validation, we take the training set and randomly partition
-it into *k* equally sized folds (or groups). We then select one fold to
-use as a validation set and train a model on the remaining *k-1* folds.
-We repeat the process, each time using a different fold as a validation
-set so that in total each fold is used once as a validation set and
-*k-1* times as a training set. After this, we end up with a total of *k*
-models and calculate the cross validated error by taking the average
-over the errors of each individual model which provides us with an
-estimate of the true error. Since we’re using *repeated* *k*-fold cross
-validation, we then repeat the process *N* times and take the final
-cross validated error to be the average of each of the individual cross
-validated errors - we’ll take *k* = 10 and *N* = 5. This then gives us a
-robust way to compare the accuracy of different types of
+it into ![k](https://latex.codecogs.com/png.latex?k "k") equally sized
+folds (or groups). We then select one fold to use as a validation set
+and train a model on the remaining
+![k-1](https://latex.codecogs.com/png.latex?k-1 "k-1") folds. We repeat
+the process, each time using a different fold as a validation set so
+that in total each fold is used once as a validation set and
+![k-1](https://latex.codecogs.com/png.latex?k-1 "k-1") times as a
+training set. After this, we end up with a total of
+![k](https://latex.codecogs.com/png.latex?k "k") models and calculate
+the cross validated error by taking the average over the errors of each
+individual model which provides us with an estimate of the true error.
+Since we’re using *repeated* ![k](https://latex.codecogs.com/png.latex?k
+"k")-fold cross validation, we then repeat the process
+![N](https://latex.codecogs.com/png.latex?N "N") times and take the
+final cross validated error to be the average of each of the individual
+cross validated errors - we’ll take ![k
+= 10](https://latex.codecogs.com/png.latex?k%20%3D%2010 "k = 10") and
+![N = 5](https://latex.codecogs.com/png.latex?N%20%3D%205 "N = 5"). This
+then gives us a robust way to compare the accuracy of different types of
 models.
-
-``` r
-predict_class <- function(data, response, predictors, model_type, family = NULL){
-  # split the data into test and train, with 70% train
-  train_index <- createDataPartition(data[[response]], p = 0.7, list = FALSE)
-  train_data <- data[train_index, ]
-  test_data <- data[-train_index, ]
-  
-  # create a formula from the response and predictors
-  predictors <- paste(predictors, collapse = "+")
-  formula <- as.formula(paste(response, "~", predictors))
-  
-  # train the model
-  ctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
-  
-  if(is.null(family)){
-    model <- train(formula, data = train_data, method = model_type, 
-                   trControl = ctrl)
-  } else{
-    model <- train(formula, data = train_data, method = model_type, 
-                 family = family, trControl = ctrl)
-  }
-  
-  # run the model on the test data
-  prediction <- model %>%
-    predict(test_data)
-  
-  results <- list("model" = model, "prediction" = prediction, 
-                  "test_data"  = test_data)
-  
-  return(results)
-}
-```
 
 ### Multiple logistic regression
 
 We’ve now got our data set in a format that’s suitable for modelling.
 This is a binary classification problem since, given the set of patient
 attributes, we want to answer the question “does the patient have heart
-disease?”. One of the simplest methods for calssification (and the one
+disease?”. One of the simplest methods for classification (and the one
 we’ll try first), is multiple logistic regression, so let’s talk a
 little about how it works.
 
@@ -517,31 +570,52 @@ probability, but this approach suffers from the fact that we could
 return probabilities that were either less than `0` or greater than `1`,
 and these probabilities would be essentially meangingless. Multiple
 logistic regression avoids this problem by constraining all predictions
-to the interval \[0,1\].
+to the interval
+![\[0,1\]](https://latex.codecogs.com/png.latex?%5B0%2C1%5D "[0,1]") by
+modelling the probaility using the logistic function
 
-We’ll use the `caret` library and the function we wrote above to train a
-multiple logistic regression model. In general if we don’t have any
-domain knowledge which suggests that all the features in our data set
-should be important in our model, then we might want to find an optimal
-feature set, but since we have good reason to believe that each of the
-features in the data set are indicators of heart disease, we’ll proceed
-to use them all.
+  
+![\\rm{Pr}(Y = 1 | \\textbf{X}) = \\frac{e^{\\beta\_0 +
+\\beta\_1\\textbf{X}}}{1 + e^{\\beta\_0 +
+\\beta\_1\\textbf{X}}}](https://latex.codecogs.com/png.latex?%5Crm%7BPr%7D%28Y%20%3D%201%20%7C%20%5Ctextbf%7BX%7D%29%20%3D%20%5Cfrac%7Be%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D%7B1%20%2B%20e%5E%7B%5Cbeta_0%20%2B%20%5Cbeta_1%5Ctextbf%7BX%7D%7D%7D
+"\\rm{Pr}(Y = 1 | \\textbf{X}) = \\frac{e^{\\beta_0 + \\beta_1\\textbf{X}}}{1 + e^{\\beta_0 + \\beta_1\\textbf{X}}}")  
+,
+
+where ![\\textbf{X} = (X\_1, X\_2, \\ldots,
+X\_p)](https://latex.codecogs.com/png.latex?%5Ctextbf%7BX%7D%20%3D%20%28X_1%2C%20X_2%2C%20%5Cldots%2C%20X_p%29
+"\\textbf{X} = (X_1, X_2, \\ldots, X_p)") is the vector of
+![p](https://latex.codecogs.com/png.latex?p "p") predictors. We’ll use
+the `caret` library and the function we wrote above to train a multiple
+logistic regression model. In general if we don’t have any domain
+knowledge which suggests that all the features in our data set should be
+important in our model, then we might want to find an optimal feature
+set, but since we have good reason to believe that each of the features
+in the data set are indicators of heart disease, we’ll proceed to use
+them all.
 
 ``` r
 library(caret)
 set.seed(100)
 
+# split the data into test and train, with 70% train
+train_index <- createDataPartition(data$target, p = 0.7, list = FALSE)
+train_data <- data[train_index, ]
+test_data <- data[-train_index, ]
+
+# repeated k-fold cross validation
+ctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)  
+
 # train the model
-model_log <- predict_class(
-  data = data,
-  response = "target",
-  predictors = ".",
-  model_type = "glm",
-  family = "binomial"
+model_log <- train(
+  target ~ .,
+  data = train_data,
+  method = "glm",
+  family = "binomial",
+  trControl = ctrl
 )
 
 # check the accuracy
-model_log$model
+model_log
 ```
 
     ## Generalized Linear Model 
@@ -556,12 +630,12 @@ model_log$model
     ## Resampling results:
     ## 
     ##   Accuracy   Kappa    
-    ##   0.8322294  0.6606287
+    ##   0.8359524  0.6687658
 
 We can see from the above results that the multiple logistic regression
-model has an accuracy of roughly 83% which is impressive for such a
+model has an accuracy of roughly 84% which is impressive for such a
 simple model\! The model has also returned a `Kappa` value of roughly
-`0.66` - this is Cohen’s kappa which essentially gives a measure of the
+`0.67` - this is Cohen’s kappa which essentially gives a measure of the
 model accuracy taking into account the likelihood that the model
 could’ve classified some observations correctly by chance. Let’s see
 which of the features were most influential by looking at the variable
@@ -569,7 +643,7 @@ importance scores:
 
 ``` r
 # get variable importance scores
-var_imp <- varImp(model_log$model)$importance
+var_imp <- varImp(model_log)$importance
 
 # plot
 tibble(
@@ -584,7 +658,7 @@ tibble(
   theme_ipsum()
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-14-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-15-1.png" width="672" style="display: block; margin: auto;" />
 
 The most influential predictor in the model is whether or not the
 patient experienced nonanginal pain, closely followed by whether or not
@@ -636,7 +710,7 @@ data %>%
     ## # A tibble: 4 x 3
     ## # Groups:   fbs [2]
     ##   fbs   target `n()`
-    ##   <fct> <fct>  <int>
+    ##   <chr> <chr>  <int>
     ## 1 0     0        116
     ## 2 0     1        142
     ## 3 1     0         22
@@ -676,15 +750,15 @@ Let’s train our tree:
 set.seed(100)
 
 # train the model
-model_tree <- predict_class(
-  data = data,
-  response = "target",
-  predictors = ".",
-  model_type = "rpart"
+model_tree <- train(
+  x = train_data[, -which(names(train_data) %in% "target")],
+  y = train_data$target,
+  method = "rpart",
+  trControl = ctrl
 )
 
 # check the accuracy
-model_tree$model
+model_tree
 ```
 
     ## CART 
@@ -695,19 +769,19 @@ model_tree$model
     ## 
     ## No pre-processing
     ## Resampling: Cross-Validated (10 fold, repeated 5 times) 
-    ## Summary of sample sizes: 192, 191, 191, 192, 192, 192, ... 
+    ## Summary of sample sizes: 191, 191, 191, 191, 193, 193, ... 
     ## Resampling results across tuning parameters:
     ## 
     ##   cp          Accuracy   Kappa    
-    ##   0.03092784  0.7513247  0.4985658
-    ##   0.04123711  0.7533636  0.5046338
-    ##   0.51546392  0.6208831  0.1912991
+    ##   0.01546392  0.7628831  0.5203895
+    ##   0.04123711  0.7376190  0.4701111
+    ##   0.52577320  0.6319913  0.2233102
     ## 
     ## Accuracy was used to select the optimal model using the largest value.
-    ## The final value used for the model was cp = 0.04123711.
+    ## The final value used for the model was cp = 0.01546392.
 
 Again, despite such a relatively simple model, we’ve managed to achieve
-an accuracy of approximately 75%. Whilst this is lower than the 83%
+an accuracy of approximately 76%. Whilst this is lower than the 84%
 accuracy we were able to achieve from the multiple logistic regression
 model (a decrease of around 10%), as we’ll see further down, the
 decision tree approach benefits from significantly greater
@@ -715,13 +789,25 @@ interpretability, not least because we can easily visualise the train of
 logic that geos into a classification, and this shouldn’t be
 underestimated, especially for a problem like this where one of the key
 interests may actually be gaining an understanding of the driving
-factors as opposed to raw predictive power.
+factors behind heart disease as opposed to raw predictive power.
 
 ``` r
 library(rattle)
 
 # visualise the decision tree
-fancyRpartPlot(model_tree$model$finalModel, sub = "")
+fancyRpartPlot(model_tree$finalModel, sub = "")
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-18-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-19-1.png" width="672" style="display: block; margin: auto;" />
+
+We can see from the visualisation of the final decision tree that
+`thal`, `cp`, `oldpeak` and `thalach` are the only predictors considered
+when classifying the patient. This isn’t totally desimilar to the top
+features selected using the multiple logistic regression model, though
+our tree hasn’t used the number of major vessels `ca`. We can see that
+85% of patients with a fixed defect, `thal = 2`, were categorised has
+having heart disease, though the ST depression `oldpeak` is a necessary
+differentiator. Similarly, 74% of patients with either normal or
+reversible defects, `thal = 1` or `thal = 3`, are ultimately categorised
+as not having heart disease, though here two additional categories are
+necessary.
