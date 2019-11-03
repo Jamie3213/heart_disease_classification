@@ -206,12 +206,12 @@ females is slightly higher than males, as is the cholosterol level and
 maximum heartrate, whilst the ST depression is slightly lower. Whilst
 the difference might not be large in magnitude, we can check if the
 differences are statistically significant, i.e. whether we’re likely to
-observe them in a world where there really was no difference. How we do
+observe them in a world where there really is no difference. How we do
 that depends on the distributions of the variables, if they’re normally
 distributed then we can use an unpaired two-samples t-test, whereas if
-the variables are non-normally distributed, then we’ll use a two-samples
-Wilcoxon rank test. We therefore need to check for normality in each
-variable split between male and female
+the variables are non-normally distributed, then we can use a
+two-samples Wilcoxon rank test. We therefore need to check for normality
+in each variable split between male and female
 subsets:
 
 ``` r
@@ -291,9 +291,9 @@ number of major vessels `ca` for males and females is significant,
 whilst the differences between the remaining medians aren’t
 statistically significant.
 
-It’d be interesting to understand how these variables correlate with the
-`target` variable which indicates whether or not a patient had heart
-disease (`0` indicating no heart disease and `1` indicating heart
+It’d be interesting to understand how the different variables correlate
+with the `target` variable which indicates whether or not a patient had
+heart disease (`0` indicating no heart disease and `1` indicating heart
 disease), and we can do this by calculating the point-biserial
 correlation coefficients:
 
@@ -339,9 +339,9 @@ tibble(
 We can see that all the correlations are significant (i.e. have a
 ![p](https://latex.codecogs.com/png.latex?p "p")-value less than
 ![5\\%](https://latex.codecogs.com/png.latex?5%5C%25 "5\\%")), except
-for the correlation with cholesterol, however this is a weak correlation
-regardless. In fact in general the correlations are mostly weak, though
-there are moderate correlations
+for the correlation with cholesterol `chol`, however this is a
+negligible correlation regardless. In fact in general the correlations
+are mostly negligible, though there are weak correlations
 (![\\approx0.4](https://latex.codecogs.com/png.latex?%5Capprox0.4
 "\\approx0.4") in absolute value), with both the maximum heartrate
 `thalach` and the ST depression `oldpeak`. We can interpret this to mean
@@ -353,8 +353,8 @@ heartrate and a decrease in ST depression.
 
 We’ve done some analysis of the numeric variables in the data set, so
 now let’s move on to looking at the categorical variables. A key first
-question is how skewed is our data set towards either people with heart
-disease or those without?
+consideration is how skewed our data set is towards either people with
+heart disease or those without?
 
 ``` r
 # plot 
@@ -378,8 +378,7 @@ From the above plot, we can see that there are slightly more patients
 with heart disease than without, though the data set isn’t massively
 skewed, with only a ![9\\%](https://latex.codecogs.com/png.latex?9%5C%25
 "9\\%") difference. Similarly, we can look at the proportion of patients
-in each of a variable’s categories for heart disease vs. no heart
-disease:
+in each of a variable’s classes split by `target` classification:
 
 ``` r
 # get the categorical variables
@@ -421,8 +420,8 @@ do.call(grid.arrange, cat_plots)
 A number of things stand out from the plots above:
 
   - There is a similar proportion of men in both subsets of patients,
-    but a much larger proportion of women with heart disease than
-    without;
+    but a much larger proportion of women in the subet with heart
+    disease than the subset without;
 
   - There is a clear difference between the types of chest pain
     experienced by those with and without heart disease. Patients
@@ -432,8 +431,8 @@ A number of things stand out from the plots above:
     [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4468223/) for
     reference to the types of chest pain measured in this data set;
 
-  - There is almost no difference in the blood sugar levels of patients
-    with and without heart disease;
+  - There is almost no difference in the threshold blood sugar levels of
+    patients with and without heart disease;
 
   - The proportion of patients with normal ECG results decreases and the
     proportion with abnormal ECG results increases between patients
@@ -443,19 +442,20 @@ A number of things stand out from the plots above:
     noticeably higher in patients with heart disease;
 
   - For patients without heart disease, the slope of the ST curve peak
-    is predominantly flat, whilst for those with heart disease, the
-    curve peak is predominantly downward-sloping; and
+    is predominantly flat (`slope = 1`), whilst for those with heart
+    disease, the curve peak is predominantly downward-sloping (`slope
+    = 2`); and
 
   - Finaly, patients with heart disease primarily display a fixed
-    abnormality in the Thallium-201 stress scintigraphy test, whilst
-    those without heart disease typically display a reversible
-    abnormality.
+    abnormality in the Thallium-201 stress scintigraphy test (`thal
+    = 2`), whilst those without heart disease typically display a
+    reversible abnormality (`thal = 3`).
 
 It’s also noticeable that there looks to be at least one instance in
 both the “no heart disease” and “heart disease” subsets where `thal
-= 0`. The `thal` variable is only defined for values `1`, `2` and `3`
+= 0`. The `thal` variable is only defined for classes `1`, `2` and `3`
 which means we’ve actually got some missing values, so before we carry
-on we’ll identify those and replace them.
+on we’ll identify and replace them.
 
 ``` r
 # count the number of observations in each level
@@ -473,10 +473,10 @@ data %>%
     ## 4 3       117
 
 As we thought, there are only two instances where `thal = 0`. To replace
-them, we’ll take the most frequent value for patients with and without
-heart disease, since we already saw from the plots that one of the
-missing values occurs in the subset of patients with heart disease and
-the other occurs in the subset without.
+them, we’ll take the most frequent value for `thal` within the
+respective `target` subet, since we already saw from the plots that one
+of the missing values occurs in the subset of patients with heart
+disease and the other occurs in the subset without.
 
 ``` r
 # get most frequent level in each group
@@ -540,7 +540,7 @@ average over the errors of each individual model so that the cross
 validated error over ![k](https://latex.codecogs.com/png.latex?k "k")
 models,
 ![CV\_{(k)}](https://latex.codecogs.com/png.latex?CV_%7B%28k%29%7D
-"CV_{(k)}") is given by
+"CV_{(k)}"), is given by
 
 <center>
 
@@ -605,14 +605,54 @@ Throughout, we’ll take ![k
 then gives us a robust way to compare the performance of different
 models based on an estimate of the test error.
 
-### Multiple logistic regression
+### Baseline model
 
-We’ve now got our data set in a format that’s suitable for modelling.
+Before we actually train any models, it’s worth coming up with a
+baseline model to compare them to. The baseline model should be a naive
+prediction and if our models can’t beat the accuracy of the baseline,
+then it suggests that our approach may be wrong or potentially that the
+response variable just isn’t something that can be easily predicted
+based on the data we have available.
+
 This is a binary classification problem since, given the set of patient
 attributes, we want to answer the question “does the patient have heart
-disease?”. One of the simplest methods for classification (and the one
-we’ll try first), is multiple logistic regression, so let’s talk a
-little about how it works.
+disease?” As such, an obvious, simple prediction would be to predict the
+most common result. Let’s start by creating our training and test sets:
+
+``` r
+library(caret)
+set.seed(100)
+
+# split the data into test and train, with 70% train
+train_index <- createDataPartition(data$target, p = 0.7, list = FALSE)
+train_data <- data[train_index, ]
+test_data <- data[-train_index, ]
+
+# proportion of heart disease vs. no heart disease
+train_data %>%
+  group_by(target) %>%
+  tally() %>%
+  mutate(prop = n / sum(n))
+```
+
+    ## # A tibble: 2 x 3
+    ##   target     n  prop
+    ##   <chr>  <int> <dbl>
+    ## 1 0         97 0.455
+    ## 2 1        116 0.545
+
+We can see from above that the most frequent value for `target` in the
+training set is `1` and that if we were to simply predict every value of
+`target` to be `1`, then we’d achieve a classification accuracy of
+roughly ![55\\%](https://latex.codecogs.com/png.latex?55%5C%25 "55\\%"),
+so this will form the baseline against which we’ll compare any other
+model.
+
+### Multiple logistic regression
+
+We’re going to try two different models, the first is one of the
+simplest methods for classification, multiple logistic regression, so
+let’s talk a little about how it works.
 
 With a typical regression model we’re trying to predict the value of a
 continuous response variable, for example, a person’s salary given their
@@ -620,17 +660,16 @@ age and the number of years they spent in higher education. In this case
 it’s completely reasonable get a prediction of say `27,836.89`. However,
 for the same reason that we encoded some of the variables in the data
 set as characters previously, it makes no sense if our model were to
-predict a value of `0.768` in response to the question of whether or not
-a person has heart disease - they either do or they don’t.
+predict a value such as `0.768` in response to the question of whether
+or not a person has heart disease - they either do or they don’t.
 
 With multiple logistic regression, rather than predicting a `0` or a
 `1`, we predict the probability that an observation belongs to one of
 the categories. We could use multiple linear regression to model this
 probability, but this approach suffers from the fact that we could
 return probabilities that were either less than `0` or greater than `1`,
-and these probabilities would be essentially meangingless. Multiple
-logistic regression avoids this problem by constraining all predictions
-to the interval
+which would be essentially meangingless. Multiple logistic regression
+avoids this problem by constraining all predictions to the interval
 ![\[0,1\]](https://latex.codecogs.com/png.latex?%5B0%2C1%5D "[0,1]"),
 modelling the probaility using the logistic function
 
@@ -652,23 +691,15 @@ X\_p)](https://latex.codecogs.com/png.latex?%5Ctextbf%7BX%7D%20%3D%20%28X_1%2C%2
 "p(\\textbf{X}) = \\rm{Pr}(Y = 1 \\,|\\, \\textbf{X})") is the
 probability that the response variable (in this case `target`), takes a
 value of ![1](https://latex.codecogs.com/png.latex?1 "1") given some
-![X\_i](https://latex.codecogs.com/png.latex?X_i "X_i"). We’ll use the
-`caret` library to train a multiple logistic regression model. In
-general if we don’t have any domain knowledge which suggests that all
-the features in our data set should be important in our model, then we
-might want to find an optimal feature set, but since we have good reason
-to believe that each of the features in the data set are indicators of
-heart disease, we’ll use them all.
+![X\_i](https://latex.codecogs.com/png.latex?X_i "X_i"). In general if
+we don’t have any domain knowledge which suggests that all the features
+in our data set should be important in our model, then we might want to
+find an optimal feature set, but since we have good reason to believe
+that each of the features in the data set are indicators of heart
+disease, we’ll use them all. We’ll use the `caret` library to train the
+model:
 
 ``` r
-library(caret)
-set.seed(100)
-
-# split the data into test and train, with 70% train
-train_index <- createDataPartition(data$target, p = 0.7, list = FALSE)
-train_data <- data[train_index, ]
-test_data <- data[-train_index, ]
-
 # repeated k-fold cross validation
 ctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)  
 
@@ -702,8 +733,10 @@ model_log
 We can see from the above results that the multiple logistic regression
 model has an accuracy of roughly
 ![84\\%](https://latex.codecogs.com/png.latex?84%5C%25 "84\\%") which is
-impressive for such a simple model\! The model has also returned a
-`Kappa` value of roughly `0.67` - this is Cohen’s kappa which
+impressive for such a simple model and represents a nearly
+![53\\%](https://latex.codecogs.com/png.latex?53%5C%25 "53\\%") increase
+in accuracy compared to the baseline model. The model has also returned
+a `Kappa` value of roughly `0.67` - this is Cohen’s kappa which
 essentially gives a measure of the model accuracy taking into account
 the likelihood that the model could’ve classified some observations
 correctly by chance. Let’s see which of the features were most
@@ -726,7 +759,7 @@ tibble(
   theme_ipsum()
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-15-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-16-1.png" width="672" style="display: block; margin: auto;" />
 
 The most influential predictor in the model is whether or not the
 patient experienced nonanginal pain (`cp = 3`), closely followed by
@@ -739,6 +772,74 @@ off. It’s also noticeable that whether or not the patient was male (`sex
 = 1`), looks to be a fairly important predictor and this is sensible
 since again we saw in the visualisation that there were significantly
 more male patients in the “no heart disease” subset than female.
+
+Whilst the overall classifiation accuracy is a useful metric, it can
+also be misleading. For example, if our data set were heavily skewed
+towards one class, then we could potentially mis-classify an entire
+category, but still achieve a high overall classification accuracy. This
+is particularly important in areas of medical diagnoses where only a
+small number of observations of a disease are present in the data. We
+alredy checked previously that our data wasn’t highly skewed, but even
+so it’s useful to understand how the model classified the different
+sets, and we can do this by looking at the confusion matrix:
+
+``` r
+# confusion matrix for the training set
+confusionMatrix.train(model_log)
+```
+
+    ## Cross-Validated (10 fold, repeated 5 times) Confusion Matrix 
+    ## 
+    ## (entries are percentual average cell counts across resamples)
+    ##  
+    ##           Reference
+    ## Prediction    0    1
+    ##          0 36.7  7.6
+    ##          1  8.8 46.9
+    ##                             
+    ##  Accuracy (average) : 0.8357
+
+From the confusion matrix we can see that the sensitivity of the model
+is ![87\\%](https://latex.codecogs.com/png.latex?87%5C%25 "87\\%"),
+i.e. the percentage of true heart disease patients that were correctly
+identified, whilst the specificity of the model (the percentage of
+patients correctly identified as not having heart disease), is
+approximately ![80\\%](https://latex.codecogs.com/png.latex?80%5C%25
+"80\\%"). This is positive since in reality we’d likely be most
+concerned about correctly identifying all patients who do have heart
+disease, even if in practice that means mis-identifying some who don’t.
+If we think about the baseline model, we’d achieve a sensitivity of
+![100\\%](https://latex.codecogs.com/png.latex?100%5C%25 "100\\%")
+since, by our definition of the model, we assume that every patient had
+heart disease so we’d always classify any true occurrence of heart
+disease correctly. However, we’d have a specificity of
+![0](https://latex.codecogs.com/png.latex?0 "0") since we’d incorrectly
+classify every patient without heart disease and this probably isn’t a
+reasonable trade-off in order to achieve a high sensitivity.
+
+``` r
+# confusion matrix for the baseline model
+conf_matrix_base <- confusionMatrix(
+  factor(rep(1, nrow(test_data)), levels = c(0, 1)),
+  as.factor(test_data$target)
+)
+
+conf_matrix_base$table
+```
+
+    ##           Reference
+    ## Prediction  0  1
+    ##          0  0  0
+    ##          1 41 49
+
+The confusion matrix for the baseline shows exactly what we said above.
+In total there were `49` true instances of heart disease, and the
+baseline classifies them all correctly. However, there were also `41`
+instances of patients without heart disease, but the baseline classifies
+all of these incorrectly. The multiple logistic regression model is
+therefore more accurate overall than the baseline and, whilst its
+sensitivity is lower, it is much more balanced than the baseline with a
+signifiantly higher specificity.
 
 ### Decision tree
 
@@ -806,7 +907,7 @@ patients, `23` with heart disease and `22` without. Similarly, in the
 disease and `116` without. This is a little easier to see
 visually:
 
-<img src="README_files/figure-gfm/unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-20-1.png" style="display: block; margin: auto;" />
 
 The Gini scores for the leaf nodes are given by:
 
@@ -953,7 +1054,7 @@ library(rattle)
 fancyRpartPlot(model_tree$finalModel, sub = "")
 ```
 
-<img src="README_files/figure-gfm/unnamed-chunk-22-1.png" width="672" style="display: block; margin: auto;" />
+<img src="README_files/figure-gfm/unnamed-chunk-25-1.png" width="672" style="display: block; margin: auto;" />
 
 We can see from the visualisation of the final decision tree that
 `thal`, `cp`, `oldpeak` and `thalach` are the only predictors considered
@@ -974,4 +1075,114 @@ majority of patients without hard disease had `cp = 0`, and from the
 point-biserial correlation coefficients we saw moving from `target = 0`
 to `target = 1` was associated with an increase in `thalach`.
 
-### Linear discriminant analysis
+As we did for the multiple logistic regression model, we should also
+look at the confusion matrix:
+
+``` r
+# confusion matrix for decision tree 
+confusionMatrix.train(model_tree)
+```
+
+    ## Cross-Validated (10 fold, repeated 5 times) Confusion Matrix 
+    ## 
+    ## (entries are percentual average cell counts across resamples)
+    ##  
+    ##           Reference
+    ## Prediction    0    1
+    ##          0 33.1 11.2
+    ##          1 12.5 43.3
+    ##                             
+    ##  Accuracy (average) : 0.7634
+
+From the confusion matrix we can see that the model has a sensitivity of
+![79\\%](https://latex.codecogs.com/png.latex?79%5C%25 "79\\%") which is
+a drop of approximately
+![9\\%](https://latex.codecogs.com/png.latex?9%5C%25 "9\\%") compared to
+the multiple logistic regression model. The specificty is
+![73\\%^](https://latex.codecogs.com/png.latex?73%5C%25%5E "73\\%^")
+which also represents a drop of around
+![9\\%](https://latex.codecogs.com/png.latex?9%5C%25 "9\\%") from the
+multiple logistic regression model. The decision tree model is therefore
+worse than the logistic regression model, both in terms of its overall
+classification accuracy, as well as in its ability to correctly identify
+true instances of either class, though it’s arguably much easier to
+interpret and therefore potentially more informative.
+
+## Choosing a final model
+
+We’ve now trained both a logistic regression model and a decision tree
+model. We’ve seen that despite the relative simplicity of the both
+methods, each is able to achieve a surprisingly good overall accuracy
+and neither seems to suffer from skewed accuracy between either class.
+Since the multiple logistic regression model was the most accuracte
+(both in terms of overall classification accuracy, as well as
+sensitivity and specificity), we’ll use it as the final model and test
+on the test set to see how well it performs on unseen data:
+
+``` r
+# predict on the test data
+pred <- predict(model_log, test_data)
+
+# confusion matrix
+confusionMatrix(pred, as.factor(test_data$target), positive = "1")
+```
+
+    ## Confusion Matrix and Statistics
+    ## 
+    ##           Reference
+    ## Prediction  0  1
+    ##          0 30  5
+    ##          1 11 44
+    ##                                           
+    ##                Accuracy : 0.8222          
+    ##                  95% CI : (0.7274, 0.8948)
+    ##     No Information Rate : 0.5444          
+    ##     P-Value [Acc > NIR] : 2.84e-08        
+    ##                                           
+    ##                   Kappa : 0.6373          
+    ##                                           
+    ##  Mcnemar's Test P-Value : 0.2113          
+    ##                                           
+    ##             Sensitivity : 0.8980          
+    ##             Specificity : 0.7317          
+    ##          Pos Pred Value : 0.8000          
+    ##          Neg Pred Value : 0.8571          
+    ##              Prevalence : 0.5444          
+    ##          Detection Rate : 0.4889          
+    ##    Detection Prevalence : 0.6111          
+    ##       Balanced Accuracy : 0.8148          
+    ##                                           
+    ##        'Positive' Class : 1               
+    ## 
+
+From the confusion matrix and other accuracy metrics we can see that on
+the test set, the logistic regression model achieved a classification
+accuracy of ![82\\%](https://latex.codecogs.com/png.latex?82%5C%25
+"82\\%") which is extremely close to the training set accuracy of
+![84\\%](https://latex.codecogs.com/png.latex?84%5C%25 "84\\%"). In
+addition, there’s actually been an increase in the sensitivity from
+![87\\%](https://latex.codecogs.com/png.latex?87%5C%25 "87\\%") to
+![89\\%](https://latex.codecogs.com/png.latex?89%5C%25 "89\\%"), but a
+noticeable decrease in the specificity, from
+![80\\%](https://latex.codecogs.com/png.latex?80%5C%25 "80\\%") to
+![73\\%](https://latex.codecogs.com/png.latex?73%5C%25 "73\\%"). We can
+see from this that the cross validation approach to training has in fact
+provided an extremely good estimate of the true test error. We can also
+be confident that our model is not overfit, since we’ve achieved a high
+accuracy on the training set, suggesting we haven’t oversimilified
+things too much, as well as low variance since the error was similar on
+the unseen data.
+
+## Conclusion
+
+We’ve trained two different types of classification models: a multiple
+logistic regression model and a decision tree. Whilst both models were
+able to significantly ourperform the baselines model, ultimately, it was
+the logistic regression model that proved to be the most accurate, both
+in terms of overall classification accuracy, achieving an accuracy of
+![82\\%](https://latex.codecogs.com/png.latex?82%5C%25 "82\\%") on the
+test set, as well as sensitivity and specificity. Despite this, we also
+saw that whilst it was less accurate, the decision tree was much more
+interpretable than the logistic regression model, so depending on the
+purpose of our model (either prediction or inference), we could use
+either and be confident.
